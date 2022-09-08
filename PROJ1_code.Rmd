@@ -39,7 +39,6 @@ summary(sonoma_data_net)
 table(sonoma_data_net$nodeid)
 
 ggplot(sonoma_data_net) + geom_boxplot(aes(x = factor(nodeid), y = voltage))
-
 ```
 
 

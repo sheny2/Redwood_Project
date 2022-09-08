@@ -23,8 +23,11 @@ library(Hmisc)
 
 \section{Data Collection}
 
+
 \section{Data Cleaning}
 
+
 \section{Data Exploration}
+
 
 \section{Findings}
