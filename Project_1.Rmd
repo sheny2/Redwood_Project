@@ -1,0 +1,44 @@
+---
+title: "Project 1 Redwood Data Report"
+author: "Yicheng Shen (Student ID: 2806571) & Steve Bao (Student ID: XXXXXX)"
+date: "October 13, 2022"
+header-includes: 
+      - \usepackage{amsmath}
+output: 
+    pdf_document    
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(mosaic)
+library(ggplot2)
+library(GGally)
+library(caret)
+library(ggfortify)
+library(Hmisc)
+```
+
+
+```{r read data}
+sonoma_data_all <- read.csv("data/sonoma-data-all.csv")
+sonoma_data_log <- read.csv("data/sonoma-data-log.csv")
+sonoma_data_net <- read.csv("data/sonoma-data-all.csv")
+```
+
+```{r}
+summary(sonoma_data_all)
+summary(sonoma_data_log)
+summary(sonoma_data_net)
+
+table(sonoma_data_net$nodeid)
+
+ggplot(sonoma_data_net) + geom_boxplot(aes(x = factor(nodeid), y = voltage))
+
+```
+
+
+```{r}
+hist.data.frame(sonoma_data_log%>%dplyr::select(-result_time))
+summary(sonoma_data_log$humidity)
+```
+
