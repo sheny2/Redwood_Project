@@ -1,0 +1,30 @@
+---
+title: "Project 1 Redwood Data Code Appendix"
+author: "Yicheng Shen (Student ID: 2806571) & Steve Bao (Student ID: XXXXXX)"
+date: "October 13, 2022"
+header-includes: 
+      - \usepackage{amsmath}
+output: 
+    pdf_document    
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(mosaic)
+library(GGally)
+library(caret)
+library(ggfortify)
+library(ggbiplot)
+library(gridExtra)
+library(kableExtra)
+library(pracma)
+library(Hmisc)
+```
+
+\section{Data Collection}
+
+\section{Data Cleaning}
+
+\section{Data Exploration}
+
+\section{Findings}
