@@ -28,22 +28,117 @@ library(Hmisc)
 ```{r read data}
 sonoma_data_all <- read.csv("data/sonoma-data-all.csv")
 sonoma_data_log <- read.csv("data/sonoma-data-log.csv")
-sonoma_data_net <- read.csv("data/sonoma-data-all.csv")
+sonoma_data_net <- read.csv("data/sonoma-data-net.csv")
+mote_location_data <- read.table("data/mote-location-data.txt", header = TRUE)
 ```
 
-```{r}
+
+
+```{r summary data}
 summary(sonoma_data_all)
-summary(sonoma_data_log)
 summary(sonoma_data_net)
+summary(sonoma_data_log)
+```
 
-table(sonoma_data_net$nodeid)
 
-ggplot(sonoma_data_net) + geom_boxplot(aes(x = factor(nodeid), y = voltage))
+
+```{r}
+hist.data.frame(sonoma_data_net%>%dplyr::select(-result_time,-epoch,-nodeid, -parent))
+plot(sonoma_data_net$humidity, sonoma_data_net$voltage)
 ```
 
 
 ```{r}
-hist.data.frame(sonoma_data_log%>%dplyr::select(-result_time))
-summary(sonoma_data_log$humidity)
+hist(sonoma_data_net$voltage, breaks = 30)
+summary(sonoma_data_net$voltage)
+summary(sonoma_data_log$voltage)
 ```
+
+
+```{r clean log}
+sonoma_data_log_clean <- sonoma_data_log %>% 
+                            filter(voltage <= 3, voltage >= 2.5)
+
+# hist(sonoma_data_log_clean$humid_temp)
+# hist(sonoma_data_log_clean$humidity)
+
+summary(sonoma_data_log_clean)
+
+hist.data.frame(sonoma_data_log_clean%>%dplyr::select(-c(result_time, epoch, nodeid, parent, depth)))
+
+# remove na
+sonoma_data_log_clean2 <- sonoma_data_log_clean %>% na.omit() 
+
+# check na
+summary(sonoma_data_log_clean2)
+
+# add location data
+sonoma_data_log_clean3 <- left_join(sonoma_data_log_clean2, mote_location_data, by = c("nodeid" = "ID"))
+
+hist.data.frame(sonoma_data_log_clean3%>%dplyr::select(c(humidity, humid_temp, hamatop, hamabot)))
+
+log_clean_four <- sonoma_data_log_clean3%>%dplyr::select(c(humidity, humid_temp, hamatop, hamabot))
+ 
+par(mfrow = c(2,2));
+invisible(lapply(X=colnames(log_clean_four),FUN=function(s)boxplot(log_clean_four[,s], 
+                main=paste("Histogram of", s),xlab=s, horizontal = T)))
+
+
+sonoma_data_log_final <- sonoma_data_log_clean3
+```
+
+
+```{r clean net}
+sonoma_data_net_clean <- sonoma_data_net %>% filter(voltage <= 500)
+
+# adjust voltage
+m_net <- mean(sonoma_data_net_clean$voltage)
+m_log <- mean(sonoma_data_log_clean$voltage)
+ratio <- m_net / m_log 
+
+# filter voltage
+sonoma_data_net_clean2 <- sonoma_data_net_clean %>%
+                            mutate(voltage_new = voltage / ratio) %>% 
+                            filter(voltage_new <= 3, voltage_new >= 2.5)
+
+# check dist. of temp
+plot(sonoma_data_net_clean2$humid_temp)
+
+# plot hist for every var.
+hist.data.frame(sonoma_data_net_clean2 %>% dplyr::select(-c(
+  result_time, voltage, epoch, nodeid, parent, depth)))
+
+# remove na
+sonoma_data_net_clean3 <- sonoma_data_net_clean2 %>% na.omit() 
+
+# summary(sonoma_data_net_clean3)
+
+# add location data
+sonoma_data_net_clean4 <- left_join(sonoma_data_net_clean3, mote_location_data, by = c("nodeid" = "ID"))
+
+sonoma_data_net_final <- sonoma_data_net_clean4
+```
+
+
+
+```{r examine hama}
+sonoma_data_log_hama <- sonoma_data_log_final %>%
+                              mutate(incident_par = hamatop / 54, reflected_par = hamabot / 54)
+
+summary(sonoma_data_log_hama)
+hist(sonoma_data_log_hama$incident_par)
+hist(sonoma_data_log_hama$reflected_par)
+
+sonoma_data_net_hama <- sonoma_data_net_final %>%
+                              mutate(incident_par = hamatop / 54, reflected_par = hamabot / 54)
+
+summary(sonoma_data_net_hama)
+hist(sonoma_data_net_hama$incident_par)
+hist(sonoma_data_net_hama$reflected_par)
+```
+
+
+
+
+
 
