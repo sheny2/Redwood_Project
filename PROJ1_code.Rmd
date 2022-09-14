@@ -1,6 +1,6 @@
 ---
 title: "Project 1 Redwood Data Report"
-author: "Yicheng Shen (Student ID: 2806571) & Steve Bao (Student ID: XXXXXX)"
+author: "Yicheng Shen (Student ID: 2806571) & Yunhong Bao (Student ID: 2427527)"
 date: "October 13, 2022"
 header-includes: 
       - \usepackage{amsmath}
@@ -15,7 +15,7 @@ library(mosaic)
 library(GGally)
 library(caret)
 library(ggfortify)
-library(ggbiplot)
+#library(ggbiplot)
 library(gridExtra)
 library(kableExtra)
 library(pracma)
