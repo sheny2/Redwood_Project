@@ -28,8 +28,8 @@ library(Hmisc)
 
 \subsection{Background}
 
-With the advancement of technologies, humans are now better equipped to collect, process, and analyze huge volumes of multi-dimensional data using well-designed hardware and sophisticated software. 
-In order to fully understand and utilize large, sophiscated data, statisticians have developed applicable statistical tools for exploratory data analysis over the years. 
+With the advancement of technologies, humans are better equipped to collect, process, and analyze huge volumes of multi-dimensional data using well-designed hardware and sophisticated software. 
+In order to fully understand and utilize large, multi-dimensional data, statisticians have developed applicable statistical tools for exploratory data analysis over the years. 
 In this report, we present a detailed data cleaning and exploration process on a real data set — environmental data around a redwood tree collected by a group of biological and computer science researchers from University of California, Berkeley [@Tolle05amacroscope].  
 
 The project led by Gilman Tolle in the early summer of 2004 was a case study of a wireless sensor network that recorded 44 days in the life of a 70-meter tall redwood tree, at a density of every 5 minutes in time and every 2 meters in space.
