@@ -1,5 +1,5 @@
 ---
-title: "Project 1 Redwood Data Report"
+title: "STA 521 Project 1 Redwood Data Report"
 author: "Yicheng Shen (Student ID: 2806571) & Yunhong Bao (Student ID: 2427527)"
 date: "October 13, 2022"
 header-includes:
@@ -35,7 +35,7 @@ In this report, we present detailed data cleaning and exploration on a real data
 The project led by Gilman Tolle in the early summer of 2004 was a case study of a wireless sensor network that recorded 44 days in the life of a 70-meter tall redwood tree, at a density of every 5 minutes in time and every 2 meters in space.
 The researchers were motivated by local biologists’ interests in studying the ecophysiology of coastal redwood forests with modern technology and analysis techniques. 
 Advised by biologists, the key objective of the project was to understand the microclimate over the volume of an entire redwood tree, including air temperature, relative humidity, and photosynthetically active solar radiation (PAR). 
-In addition, each data point's node ID, time, position of sensor were also recorded.  
+In addition, each data point's node ID, time, and the position of sensor were also recorded.  
 
 The researchers carefully examined the data through conducting initial multi-dimensional analysis and range analysis, visualizing notable temporal and spatial trends, performing a combined analysis of parameters of interests, and finally removing apparent outliers and calibrating values from sensors. 
 They concluded their work by elaborating their findings and experience. They emphasize the importance of installation and the necessity of a network monitoring component since tiny differences in positioning of nodes could cause large effects on the resulting data.
