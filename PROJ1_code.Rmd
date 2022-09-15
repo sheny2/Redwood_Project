@@ -1,5 +1,5 @@
 ---
-title: "Project 1 Redwood Data Report"
+title: "Project 1 Redwood Data Code Appendix"
 author: "Yicheng Shen (Student ID: 2806571) & Yunhong Bao (Student ID: 2427527)"
 date: "October 13, 2022"
 header-includes: 

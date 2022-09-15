@@ -1,11 +1,14 @@
 ---
-title: "Project 1 Redwood Data Code Appendix"
-author: "Yicheng Shen (Student ID: 2806571) & Steve Bao (Student ID: XXXXXX)"
+title: "Project 1 Redwood Data Report"
+author: "Yicheng Shen (Student ID: 2806571) & Yunhong Bao (Student ID: 2427527)"
 date: "October 13, 2022"
-header-includes: 
-      - \usepackage{amsmath}
-output: 
-    pdf_document    
+header-includes:
+    - \setlength{\parskip}{0em}
+    - \usepackage{setspace}\doublespacing
+    - \setlength{\parindent}{2em}
+    - \usepackage{indentfirst}
+output: pdf_document
+bibliography: Redwood.bib
 ---
 
 ```{r setup, include=FALSE}
@@ -23,6 +26,51 @@ library(Hmisc)
 
 \section{Data Collection}
 
+\subsection{Background}
+
+With the advancement of technologies, humans are now better equipped to collect, process, and analyze huge volumes of multi-dimensional data using well-designed hardware and sophisticated software. 
+In order to fully understand and utilize the value of large, complex data, statisticians have also developed applicable statistical tools for exploratory data analysis over the years. 
+In this report, we present detailed data cleaning and exploration on a real dataset of a redwood tree collected by a group of biological and computer science researchers from University of California, Berkeley [@Tolle05amacroscope].  
+
+The project led by Gilman Tolle in the early summer of 2004 was a case study of a wireless sensor network that recorded 44 days in the life of a 70-meter tall redwood tree, at a density of every 5 minutes in time and every 2 meters in space.
+The researchers were motivated by local biologists’ interests in studying the ecophysiology of coastal redwood forests with modern technology and analysis techniques. 
+Advised by biologists, the key objective of the project was to understand the microclimate over the volume of an entire redwood tree, including air temperature, relative humidity, and photosynthetically active solar radiation (PAR). 
+In addition, each data point's node ID, time, position of sensor were also recorded.  
+
+The researchers carefully examined the data through conducting initial multi-dimensional analysis and range analysis, visualizing notable temporal and spatial trends, performing a combined analysis of parameters of interests, and finally removing apparent outliers and calibrating values from sensors. 
+They concluded their work by elaborating their findings and experience. They emphasize the importance of installation and the necessity of a network monitoring component since tiny differences in positioning of nodes could cause large effects on the resulting data.
+Their study also verified the existence of spatial gradients in the microclimate around a redwood tree.
+Furthermore, their data could play a strong role in validating biological theories and building quantitative bilogical models on the sap flow rate. 
+
+Broadly speaking, this project, with the aid of interdisciplinary expertise, provides rich insights into the complex spatial variation and temporal dynamics of the microclimate surrounding a coastal redwood tree. 
+More significantly, it illustrates the potential of wireless sensor networks to obtain large quantities of data and employs a multi-dimensional analysis methodology to reveal the characteristics of the microclimate, offering a valuable example that benefits future studies and usage of similar technologies. 
+
+
+\subsection{Data Description}
+
+The field work of the project was conducted in a study area in Sonoma California. 
+The data was collected by a sensor node platform consisting of a suite of small and intricate sensor nodes deployed in various positions in the tree. 
+The node operating system was run by the TinyOS and TASK software. 
+Researchers chose to deploy sensor nodes at 15m from ground level to 70m from ground level, with roughly a 2-meter spacing between nodes. 
+They were also deployed on the west side of the tree to minimize the direct environmental effects by a thicker canopy. 
+For similar reasons, most of the nodes were placed very close to the trunk (from 0.1 to 1 meter). 
+Several nodes were also placed outside of the interior tree to monitor the microclimate of the immediate vicinity. 
+
+The period of the whole data collection process lasted for approximately 44 days. 
+The first reading was taken on Tuesday, April 27th 2004, at 5:10pm, and the last one was taken on Thursday, June 10th 2004, at 2:00pm. 
+With 33 motes deployed into the tree, researchers claimed that the maximum number of readings they could have acquired is 50,540 real-world data points per mote, with 1.7 million data points in total. 
+Nevertheless, the available data in this report only exists from May 7th, 2004 to June 2nd, 2004.  
+
+The main variables of interest in the collected dataset are temperature, humidity, and light levels, or the photosynthetically active solar radiation (PAR). 
+Temperature is measured in degree celsius ($^{\circ}C$), and humidity is measured in percentage of relative humidity (RH). 
+The measurement of PAR, which suggests the energy available for photosynthesis, can be further categorized into incident and reflected PAR measurements. 
+While the sensors initially recorded the PAR measurements in Lux, the researchers converted to the unit of PPFD ($\mu \text{mol} \ m^{-2} s^{-1}$) in their reported findings. 
+
+The data from each node in the mesh network were collected by a selection query using TinySQL and stored into `sonoma-data-net.csv`, a file with 114,980 rows of data.
+Researchers also extended their software architecture to include a local data logging system as a backup in case of network failure. 
+The readings were passed into a flash log before taken by every query and eventually stored in the file named `sonoma-data-log.csv`, with 301,056 rows of data.
+In addition, the location information of each sensor node, or mote, was recorded in a separate document named `mote-location-data.txt`. 
+
 
 \section{Data Cleaning}
 
@@ -31,3 +79,6 @@ library(Hmisc)
 
 
 \section{Findings}
+
+
+\section{Reference}
