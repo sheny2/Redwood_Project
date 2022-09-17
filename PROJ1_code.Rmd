@@ -20,6 +20,7 @@ library(gridExtra)
 library(kableExtra)
 library(pracma)
 library(Hmisc)
+library(lubridate)
 ```
 
 
@@ -33,12 +34,129 @@ mote_location_data <- read.table("data/mote-location-data.txt", header = TRUE)
 ```
 
 
-
 ```{r summary data}
 summary(sonoma_data_all)
 summary(sonoma_data_net)
 summary(sonoma_data_log)
 ```
+
+
+```{r check duplicate data, eval = F}
+sonoma_data_all %>% 
+  select(-c(voltage,result_time)) %>% 
+  distinct() %>% 
+  group_by(epoch, nodeid) %>% 
+  dplyr::summarize(count = n()) %>%
+  filter(count!=1)
+
+sonoma_data_all %>% 
+  filter(nodeid == 136, epoch == 17)
+
+shabi <- sonoma_data_all %>% 
+  select(c(epoch,nodeid)) %>% 
+  distinct()
+```
+
+`2004-05-07 18:24:58` corresponds to `epoch` 2812
+
+```{r retrieve time in sonoma_data_log}
+epoch_2812_time <- c("2004-05-07 18:24:58.666424")
+
+epoch_2812_time <- as.POSIXct(epoch_2812_time)
+
+sonoma_data_log_with_time <- sonoma_data_log %>%
+                                  mutate(real_time = epoch_2812_time - (2812-epoch)*60*5)
+```
+
+`voltage` conversion formula by ADC: $$\frac{1023}{X} = \frac{ADC}{0.580567}$$
+
+```{r convert voltage in sonoma_data_net}
+# table(sonoma_data_net$voltage)
+# table(sonoma_data_log$voltage)
+
+sonoma_data_net_real_vol <- sonoma_data_net %>% 
+                              mutate(voltage = 1023*0.580567/voltage,      # ADC conversion
+                                      real_time = as.POSIXct(result_time)) # cover time
+
+# table(sonoma_data_net_real_vol$voltage) # double check
+```
+
+
+```{r conmbine data set and convert hama}
+all_data <- rbind(sonoma_data_log_with_time, sonoma_data_net_real_vol)
+
+all_data <- all_data %>%
+                distinct(epoch, nodeid, .keep_all = T)   # keep the first one of duplicate readings
+
+all_data <- left_join(all_data, mote_location_data, by = c("nodeid" = "ID")) %>%
+                    mutate(incident_par = hamatop / 54, reflected_par = hamabot / 54) # convert hama to PAR
+```
+
+
+```{r check outliers, out.width="75%", fig.align='center', warning = F}
+a <- all_data %>% 
+  ggplot() + geom_line(aes(real_time, humid_temp, color = factor(nodeid))) + 
+  ylim(0, 100) + theme_bw() + theme(legend.position="none")
+
+b <- all_data %>% 
+  ggplot() + geom_line(aes(real_time, humidity, color = factor(nodeid))) + 
+    ylim(-10, 130) +
+  theme_bw() + theme(legend.position="none")
+
+c <- all_data %>% 
+  ggplot() + geom_line(aes(real_time, voltage, color = factor(nodeid))) + 
+      ylim(0.5, 3.1) +
+  theme_bw() + theme(legend.position="none")
+
+grid.arrange(a,b,c,nrow=3)
+
+
+all_data_clean <- all_data %>% 
+                            na.omit() %>% 
+                            filter(voltage >= 2.4) %>%   # Remove battery failure
+                            filter(humidity <= 100) # Remove unreasonable humidity
+
+a <- all_data_clean %>% 
+  ggplot() + geom_line(aes(real_time, humid_temp, color = factor(nodeid))) + theme_bw() + theme(legend.position="none")
+
+b <- all_data_clean %>% 
+  ggplot() + geom_line(aes(real_time, humidity, color = factor(nodeid))) + theme_bw() + theme(legend.position="none")
+
+c <- all_data_clean %>% 
+  ggplot() + geom_line(aes(real_time, voltage, color = factor(nodeid))) + theme_bw() + theme(legend.position="none")
+
+grid.arrange(a,b,c,nrow=3)
+```
+
+
+```{r visualization}
+summary(all_data_clean)
+
+hist.data.frame(all_data_clean%>%
+                    dplyr::select(c(humidity, humid_temp, humid_adj, incident_par, reflected_par)))
+```
+
+
+
+
+
+
+### data cleaning thoughts
+
+```{r, eval = F, echo = F}
+# do not touch 
+
+flash_log_time <- c("2004-11-10 14:25:00")
+
+sonoma_data_all %>%
+  mutate(real_time = ifelse(result_time == flash_log_time, 
+                            as.POSIXct(as.POSIXct("2004-05-07 18:24:58.666424") - (2812 - epoch)*60*5), 
+                            as.POSIXct(result_time))) %>% 
+  ggplot() + geom_line(aes(x = real_time, y = humidity, color = factor(nodeid)))
+
+```
+
+
 
 
 
@@ -54,17 +172,38 @@ summary(sonoma_data_net$voltage)
 summary(sonoma_data_log$voltage)
 ```
 
+```{r voltage problem}
+table(sonoma_data_net$voltage)
+sonoma_data_net$voltage
 
-```{r clean log}
+strange_node <- sonoma_data_net %>%
+  filter(voltage == 1023 )
+
+table(strange_node$nodeid)
+
+
+table(sonoma_data_log$voltage)
+
+strange_node_log <- sonoma_data_log %>%
+  filter(voltage == 0.580567)
+
+table(strange_node_log$nodeid)
+```
+
+
+
+
+```{r clean sonoma_data_log}
+
 sonoma_data_log_clean <- sonoma_data_log %>% 
-                            filter(voltage <= 3, voltage >= 2.5)
+                            filter(voltage <= 3, voltage >= 2.4)
 
 # hist(sonoma_data_log_clean$humid_temp)
 # hist(sonoma_data_log_clean$humidity)
 
 summary(sonoma_data_log_clean)
 
-hist.data.frame(sonoma_data_log_clean%>%dplyr::select(-c(result_time, epoch, nodeid, parent, depth)))
+hist.data.frame(sonoma_data_log_clean%>%dplyr::select(-c(result_time, epoch, nodeid, parent, depth, real_time)))
 
 # remove na
 sonoma_data_log_clean2 <- sonoma_data_log_clean %>% na.omit() 
@@ -141,4 +280,98 @@ hist(sonoma_data_net_hama$reflected_par)
 
 
 
+
+
+
+
+
+```{r Study of Temperature and Voltage in net, warning = F}
+sonoma_data_net_norm_temp <- sonoma_data_net %>% filter(voltage<500)
+
+plot( sonoma_data_net_norm_temp$voltage,
+          sonoma_data_net_norm_temp$humid_temp)
+```
+
+
+```{r overall node failures}
+sonoma_data_net_norm_temp$real_time <- as.POSIXct(sonoma_data_net_norm_temp$result_time)
+
+a <- sonoma_data_net_norm_temp %>% 
+  ggplot() + geom_line(aes(real_time, humid_temp, color = factor(nodeid))) + theme_bw()
+
+b <- sonoma_data_net_norm_temp %>% 
+  ggplot() + geom_line(aes(real_time, humidity, color = factor(nodeid))) + theme_bw()
+
+c <- sonoma_data_net_norm_temp %>% 
+  ggplot() + geom_line(aes(real_time, voltage, color = factor(nodeid))) + theme_bw()
+
+grid.arrange(a,b,c,nrow=3)
+
+# why voltage failure goes down??? 
+
+
+sonoma_data_net %>% filter(voltage == 1023) %>% mutate(real_time = as.POSIXct(result_time)) %>%
+  ggplot() + geom_line(aes(real_time, humid_temp, color = factor(nodeid))) + theme_bw()
+
+sonoma_data_net %>% filter(voltage == 1023) %>% mutate(real_time = as.POSIXct(result_time)) %>%
+  ggplot() + geom_line(aes(real_time, humidity, color = factor(nodeid))) + theme_bw()
+
+```
+
+
+```{r specific node failure}
+a <- sonoma_data_net_norm_temp %>% 
+  filter(nodeid == 74) %>% 
+  ggplot() + geom_line(aes(real_time, humid_temp)) + theme_bw()
+
+b <- sonoma_data_net_norm_temp %>% 
+  filter(nodeid == 74) %>% 
+  ggplot() + geom_line(aes(real_time, humidity)) + theme_bw()
+
+c <- sonoma_data_net_norm_temp %>% 
+  filter(nodeid == 74) %>% 
+  ggplot() + geom_line(aes(real_time, voltage)) + theme_bw()
+
+grid.arrange(a,b,c,nrow=3)
+
+
+
+a <- sonoma_data_net_norm_temp %>%
+    filter(nodeid == 197) %>% 
+    ggplot() + geom_line(aes(real_time, humid_temp)) + theme_bw()
+  
+b <- sonoma_data_log_with_time  %>% 
+    filter(nodeid == 197) %>% 
+    ggplot() + geom_line(aes(real_time, humid_temp)) + theme_bw()
+
+
+sonoma_data_log_with_time  %>% 
+    filter(nodeid == 3) %>% select (epoch) %>% summary()
+
+sonoma_data_net  %>% 
+    filter(nodeid == 3) %>% select (epoch) %>% summary()
+    
+grid.arrange(a,b,nrow=2)
+```
+
+
+
+
+```{r}
+# sonoma_data_log_with_time
+
+min(sonoma_data_log_with_time$real_time)
+max(sonoma_data_log_with_time$real_time)
+
+a <- sonoma_data_log_voltage_clean %>% 
+  ggplot() + geom_line(aes(real_time, humid_temp, color = factor(nodeid))) + theme_bw()
+
+b <- sonoma_data_log_voltage_clean %>% 
+  ggplot() + geom_line(aes(real_time, humidity, color = factor(nodeid))) + theme_bw()
+
+c <- sonoma_data_log_voltage_clean %>% 
+  ggplot() + geom_line(aes(real_time, voltage, color = factor(nodeid))) + theme_bw()
+
+grid.arrange(a,b,c,nrow=3)
+```
 

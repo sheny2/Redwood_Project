@@ -75,6 +75,8 @@ In addition, the location information of each sensor node, or mote, was recorded
 \section{Data Cleaning}
 
 
+`voltage` conversion formula by ADC: $$\frac{1023}{X} = \frac{ADC}{0.580567}$$
+
 \section{Data Exploration}
 
 
