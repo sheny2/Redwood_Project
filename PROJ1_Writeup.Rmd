@@ -91,7 +91,7 @@ We noticed the units of `voltage` are not consistent between `sonoma-data-net.cs
 The `voltage` conversion formula: $$\frac{1023}{X} = \frac{ADC}{0.580567}$$
 
 We also converted the units of `hamatop` and `hamabot`. 
-The sensors recorded the two PAR measurements in Lux, and we converted to the unit of PPFD ($\mu \text{mol} \ m^{-2} s^{-1}$) by a conversion factor of 54 because the light Source is assumed to be mostly sunlight. 
+The sensors recorded the two PAR measurements in Lux, and we converted to the unit of PPFD ($\mu \text{mol} \ m^{-2} s^{-1}$) by a conversion factor of 54 because the light source is assumed to be mostly sunlight. 
 
 \subsection{Outlier Rejection}
 
