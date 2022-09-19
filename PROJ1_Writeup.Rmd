@@ -7,7 +7,11 @@ header-includes:
     - \usepackage{setspace}\doublespacing
     - \setlength{\parindent}{2em}
     - \usepackage{indentfirst}
-output: pdf_document
+    - \usepackage{float}
+output: 
+  pdf_document: 
+    extra_dependencies: ["float"]
+    number_sections: true
 bibliography: Redwood.bib
 ---
 
@@ -22,6 +26,12 @@ library(gridExtra)
 library(kableExtra)
 library(pracma)
 library(Hmisc)
+ggplot2::theme_set(ggplot2::theme_bw())
+knitr::opts_chunk$set(out.width = "75%", fig.align = 'center')
+knitr::opts_chunk$set(fig.pos = "H")
+
+load("data/all_data.RData")
+load("data/all_data_clean.RData")
 ```
 
 \section{Data Collection}
@@ -75,7 +85,55 @@ In addition, the location information of each sensor node, or mote, was recorded
 \section{Data Cleaning}
 
 
-`voltage` conversion formula by ADC: $$\frac{1023}{X} = \frac{ADC}{0.580567}$$
+\subsection{Unit Conversion}
+
+We noticed the units of `voltage` are not consistent between `sonoma-data-net.csv` and `sonoma-data-log.csv`, with the first requiring analog-to-digital conversion (ADC) and the latter using normal voltage units. 
+The `voltage` conversion formula: $$\frac{1023}{X} = \frac{ADC}{0.580567}$$
+
+We also converted the units of `hamatop` and `hamabot`. 
+The sensors recorded the two PAR measurements in Lux, and we converted to the unit of PPFD ($\mu \text{mol} \ m^{-2} s^{-1}$) by a conversion factor of 54 because the light Source is assumed to be mostly sunlight. 
+
+\subsection{Outlier Rejection}
+
+In terms of outliers, the investigations by @Tolle05amacroscope suggest that low or malfunctioning batteries are the main cause of anomalous readings. 
+Specifically, the researchers found that once the battery voltage falls from a maximum of 3 volts to a minimum of about 2.4 volts, a node’s reading begins to rise far out of the normal range. 
+Therefore, we removed those readings taken when sensor's battery was not in the proper range. 
+In addition, we also removed the data that reported a `humidity` reading over 100%RH.
+Figure \ref{fig:voltage} presents the comparison of before and after removing anomalous sensor readings. 
+
+```{r clean voltage, fig.cap="\\label{fig:voltage} A comparison of removing anomalous sensor readings. Plots (a) (b) and (c) are the readings before removing anomalous data, and plots (d) (e) and (f) are the readings after removing anomalous data.", echo = F, cache=T, warning=F}
+a <- all_data %>%
+  ggplot() + geom_line(aes(real_time, humid_temp, color = factor(nodeid))) +
+  ylim(0, 100) + labs(y = "Temperature", x = "", caption = "(a)") + 
+  theme(legend.position = "none", plot.caption = element_text(hjust=0.5, size=rel(1.2)))
+
+b <- all_data %>%
+  ggplot() + geom_line(aes(real_time, humidity, color = factor(nodeid))) +
+  ylim(-10, 130) + labs(y = "Humidity", x = "", caption = "(b)") + 
+  theme(legend.position = "none", plot.caption = element_text(hjust=0.5, size=rel(1.2)))
+
+c <- all_data %>%
+  ggplot() + geom_line(aes(real_time, voltage, color = factor(nodeid))) +
+  ylim(0.5, 3.1) + labs(y = "Voltage", x = "", caption = "(c)") + 
+  theme(legend.position = "none", plot.caption = element_text(hjust=0.5, size=rel(1.2)))
+
+d <- all_data_clean %>% 
+  ggplot() + geom_line(aes(real_time, humid_temp, color = factor(nodeid))) + 
+  labs(y = "Temperature", x = "", caption = "(d)") + 
+  theme(legend.position = "none", plot.caption = element_text(hjust=0.5, size=rel(1.2)))
+
+e <- all_data_clean %>% 
+  ggplot() + geom_line(aes(real_time, humidity, color = factor(nodeid))) + 
+  labs(y = "Humidity", x = "", caption = "(e)") +  
+  theme(legend.position = "none", plot.caption = element_text(hjust=0.5, size=rel(1.2)))
+
+f <- all_data_clean %>% 
+  ggplot() + geom_line(aes(real_time, voltage, color = factor(nodeid))) + 
+  labs(y = "Voltage", x = "", caption = "(f)") + 
+  theme(legend.position = "none", plot.caption = element_text(hjust=0.5, size=rel(1.2)))
+
+grid.arrange(a,d,b,e,c,f,nrow=3)
+```
 
 \section{Data Exploration}
 
