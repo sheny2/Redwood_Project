@@ -21,7 +21,7 @@ library(mosaic)
 library(GGally)
 library(caret)
 library(ggfortify)
-library(ggbiplot)
+# library(ggbiplot)
 library(gridExtra)
 library(kableExtra)
 library(pracma)
@@ -87,21 +87,39 @@ In addition, the location information of each sensor node, or mote, was recorded
 
 \subsection{Unit Conversion}
 
-The first significant unit conversion is the conversion of voltage. We noticed the units of `voltage` are not consistent between `sonoma-data-net.csv` and `sonoma-data-log.csv`. After performing a time series plot of voltage, temperature, and humidity, we were able to identity the battery failure time as depicted in the paper. However, utilizing the voltage unit from `sonoma-data-net.csv`, we see a explosion of observed voltage at failure times instead of a low voltage. Thus, it is determined that the real battery voltage in the unit of volts should be some inverse function of the voltage unit in `sonoma-data-net.csv`. Counting battery reading in both files, we observed a large repetition of voltage value 1023 and 0.580567v. Since the net data are a subset of log data, we determined that these two voltage readings are identical under certain transformation. Analog-to-digital conversion (ADC) is employed here. We calculated the following conversion formula: 
+The first significant unit conversion is the conversion of voltage. 
+We noticed the units of `voltage` are not consistent between `sonoma-data-net.csv` and `sonoma-data-log.csv`. 
+After performing a time series plot of voltage, temperature, and humidity, we were able to identity the battery failure time as depicted in the paper. 
+However, utilizing the voltage unit from `sonoma-data-net.csv`, we see a explosion of observed voltage at failure times instead of a low voltage. 
+Thus, it is determined that the real battery voltage in the unit of volts should be some inverse function of the voltage unit in `sonoma-data-net.csv`. 
+Counting battery reading in both files, we observed a large repetition of voltage value 1023 and 0.580567 volts. 
+Since the net data are a subset of log data, we determined that these two voltage readings are identical under certain transformation.
+The Analog-to-digital conversion (ADC) is employed here. 
+We calculated the following conversion formula: $$\frac{1023}{X} = \frac{ADC}{0.580567}$$
 
-$$\frac{1023}{X} = \frac{ADC}{0.580567}$$
+Voltage data in `sonoma-data-net.csv` is converted with formula. 
+After conversion, all the voltage values matches readings in the log data file. 
+Similarly significant, each value have a lower frequency in the net file than the log file, indicating the convertion is successful. 
 
-Voltage data in `sonoma-data-net.csv` is converted with fomular. After conversion, all the voltage values matches readings in the log data file. Similarly significant, each value have a lower frequency in the net file than the log file, indicating the convertion is successful. 
-
-A unit conversion is also performed on variable `hamatop` and `hamabot`. After research, we discovered that PAR measurements are stored in the unit of Lux. Thus, we converted to the unit of PPFD ($\mu \text{mol} \ m^{-2} s^{-1}$) by a conversion factor of 54 — the conversion coefficient of sunlight since its the primary light source.
+A unit conversion is also performed on variable `hamatop` and `hamabot`. 
+After research, we discovered that PAR measurements are stored in the unit of Lux. 
+Thus, we converted to the unit of PPFD ($\mu \text{mol} \ m^{-2} s^{-1}$) by a conversion factor of 54 — the conversion coefficient of sunlight since its the primary light source.
 
 \subsection{Time Restoration}
 
-Another crucial element of the data cleaning process is the restoration of time variable. In file `sonoma-data-log.csv`, time variable is fixed at 2004-11-10 14:25:00 which is the data extraction time. For data analysis purpose, we want to restore the time variable to actual data collection time. This is accomplished by evaluating the `nodeid` variable and `epoch` variable. It is observed that `nodeid` represent a specific sensor and epoch records the exact number of time it records data. Furthermore, we discovered that epoch is synchronized across all sensors, ie, an identical epoch reading indicates two data are collected roughly at the same time. Using this information, we are able to select a epoch as a benchmark and trace back and forth by adding or subtracting a calculation of time. We utilized data point `result_time`= 2004-05-07 18:24:58, `epoch`=2812 from `sonoma-data-net.csv` as a benchmark. Then, we use the fact that an increase in epoch by 1 represents a five minutes time lapse to formulate the following time restoration folular:
+Another crucial element of the data cleaning process is the restoration of time variable. 
+In the file `sonoma-data-log.csv`, the time variable is fixed at 2004-11-10 14:25:00 which is the data extraction time. 
+For data analysis purpose, we want to restore the time variable to actual data collection time. This is accomplished by evaluating the `nodeid` variable and `epoch` variable. 
+It is observed that `nodeid` represent a specific sensor and `epoch` records the exact number of time it records data. 
+Furthermore, we discovered that `epoch` is synchronized across all sensors.
+In other words, an identical epoch reading indicates two data are collected roughly at the same time. 
+Using this information, we are able to select a epoch as a benchmark and trace back and forth by adding or subtracting a calculation of time. 
+We utilized data point `result_time` = 2004-05-07 18:24:58, `epoch`= 2812 from `sonoma-data-net.csv` as a benchmark. 
+Then, we used the fact that an increase in epoch by 1 represents a five minutes time lapse to formulate the following time restoration formula:
+$$
+\text{result time}=\text{ 2004-05-07 18:24:58 } + (\text{epoch}-2812) \times 5 \text{min} 
+$$
 
-$$
-\text{result_time}=\text{ 2004-05-07 18:24:58 } + (epoch-2812)*5(min)
-$$
 Utilizing this function, the data collection time in file `sonoma-data-log.csv` is restored. Utilizing the time variable in `sonoma-data-net.csv` as a reference, the calculated time matches with the real time data by a minor error within the order of a minute???.
 
 \subsection{Data Merging}
