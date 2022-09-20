@@ -87,8 +87,11 @@ In addition, the location information of each sensor node, or mote, was recorded
 
 \subsection{Unit Conversion}
 
-We noticed the units of `voltage` are not consistent between `sonoma-data-net.csv` and `sonoma-data-log.csv`, with the first requiring analog-to-digital conversion (ADC) and the latter using normal voltage units. 
-The `voltage` conversion formula: $$\frac{1023}{X} = \frac{ADC}{0.580567}$$
+The first significant unit conversion is the conversion of voltage. We noticed the units of `voltage` are not consistent between `sonoma-data-net.csv` and `sonoma-data-log.csv`. After performing a time series plot of voltage, temperature, and humidity, we were able to identity the battery failure time as depicted in the paper. However, utilizing the voltage unit from `sonoma-data-net.csv`, we see a explosion of observed voltage at failure times instead of a low voltage. Thus, it is determined that the real battery voltage in the unit of volts should be some inverse function of the voltage unit in `sonoma-data-net.csv`. Counting battery reading in both files, we observed a large repetition of voltage value 1023 and 0.580567v. Since the net data are a subset of log data, we determined that these two voltage readings are identical under certain transformation. Analog-to-digital conversion (ADC) is employed here. We calculated the following conversion formula: 
+
+$$\frac{1023}{X} = \frac{ADC}{0.580567}$$
+
+Voltage data in `sonoma-data-net.csv` is converted with fomular. After conversion, all the voltage values matches readings in the log data file. Similarly significant, each value have a lower frequency in the net file than the log file, indicating the convertion is successful. 
 
 We also converted the units of `hamatop` and `hamabot`. 
 The sensors recorded the two PAR measurements in Lux, and we converted to the unit of PPFD ($\mu \text{mol} \ m^{-2} s^{-1}$) by a conversion factor of 54 because the light source is assumed to be mostly sunlight. 
