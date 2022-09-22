@@ -88,7 +88,7 @@ In addition, the location information of each sensor node, or mote, was recorded
 \subsection{Unit Conversion}
 
 The first significant unit conversion is the conversion of voltage. 
-We noticed the units of `voltage` are not consistent between `sonoma-data-net.csv` and `sonoma-data-log.csv`. 
+We noticed the units of `voltage` are inconsistent between `sonoma-data-net.csv` and `sonoma-data-log.csv`. 
 After performing a time series plot of voltage, temperature, and humidity, we were able to identity the battery failure time as depicted in the paper. 
 However, utilizing the voltage unit from `sonoma-data-net.csv`, we see a explosion of observed voltage at failure times instead of a low voltage. 
 Thus, it is determined that the real battery voltage in the unit of volts should be some inverse function of the voltage unit in `sonoma-data-net.csv`. 
@@ -99,7 +99,7 @@ We calculated the following conversion formula: $$\frac{1023}{X} = \frac{ADC}{0.
 
 Voltage data in `sonoma-data-net.csv` is converted with formula. 
 After conversion, all the voltage values matches readings in the log data file. 
-Similarly significant, each value have a lower frequency in the net file than the log file, indicating the convertion is successful. 
+Similarly significant, each value have a lower frequency in the net file than the log file, indicating the conversion is successful. 
 
 A unit conversion is also performed on variable `hamatop` and `hamabot`. 
 After research, we discovered that PAR measurements are stored in the unit of Lux. 
@@ -123,7 +123,8 @@ $$
 Utilizing this function, the data collection time in file `sonoma-data-log.csv` is restored. Utilizing the time variable in `sonoma-data-net.csv` as a reference, the calculated time matches with the real time data by a minor error within the order of a minute???.
 
 \subsection{Data Merging}
-
+After unit conversion, data in `sonoma-data-net.csv` and `sonoma-data-log.csv` are ready to be merged into a final data file. 
+To perform this task, we first investigated repetitive entries within each data file. An intriguing finding was that there existed data points sharing the same node id and epoch value, ie, certain sensors recorded two readings at a single time. This finding provided guidence to the method we should employ in the data-merging process. To avoid repetitive data, a row bind is performed on the mutated `sonoma-data-net.csv` and `sonoma-data-log.csv` file. Then, we selected distinct elements by the nodeid and epoch column. Through this method, only the first datapoints with repetitive nodeid and epoch values are kept. Repetition is avoided. Then, we performed a left join to combine the location data.
 
 \subsection{Outlier Rejection}
 
