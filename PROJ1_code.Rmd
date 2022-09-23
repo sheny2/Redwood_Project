@@ -21,6 +21,8 @@ library(kableExtra)
 library(pracma)
 library(Hmisc)
 library(lubridate)
+ggplot2::theme_set(ggplot2::theme_bw())
+knitr::opts_chunk$set(out.width = "100%", fig.align = 'center')
 ```
 
 
@@ -40,8 +42,13 @@ summary(sonoma_data_net)
 summary(sonoma_data_log)
 ```
 
+```{r hist of each variable in raw data, message = F}
+hist.data.frame(sonoma_data_all%>%
+                    dplyr::select(c(voltage, humidity, humid_temp, humid_adj, hamatop, hamabot)))
+```
 
-```{r check duplicate data, eval = F}
+
+```{r check duplicate data, eval = F, warning = F}
 sonoma_data_all %>% 
   select(-c(voltage,result_time)) %>% 
   distinct() %>% 
@@ -52,9 +59,9 @@ sonoma_data_all %>%
 sonoma_data_all %>% 
   filter(nodeid == 136, epoch == 17)
 
-shabi <- sonoma_data_all %>% 
-  select(c(epoch,nodeid)) %>% 
-  distinct()
+# sonoma_data_all %>% 
+#   select(c(epoch,nodeid)) %>% 
+#   distinct()
 ```
 
 `2004-05-07 18:24:58` corresponds to `epoch` 2812
@@ -82,7 +89,7 @@ sonoma_data_net_real_vol <- sonoma_data_net %>%
 ```
 
 
-```{r conmbine data set and convert hama}
+```{r conmbine data set, and adjust time convert hama}
 all_data <- rbind(sonoma_data_log_with_time, sonoma_data_net_real_vol)
 
 all_data <- all_data %>%
@@ -90,6 +97,8 @@ all_data <- all_data %>%
 
 all_data <- left_join(all_data, mote_location_data, by = c("nodeid" = "ID")) %>%
                     mutate(incident_par = hamatop / 54, reflected_par = hamabot / 54) # convert hama to PAR
+
+all_data$real_time <- all_data$real_time - 7*60*60   # weird pitfall!!! time in net is wrong by 7 hours
 ```
 
 
@@ -112,14 +121,14 @@ grid.arrange(a,b,c,nrow=3)
 
 
 all_data_clean <- all_data %>% 
-                            na.omit() %>% 
+                            na.omit() %>%                # Remove missing data
                             filter(voltage >= 2.4) %>%   # Remove battery failure
-                            filter(humidity <= 100) # Remove unreasonable humidity
+                            filter(humidity <= 100)      # Remove unreasonable humidity
 
 a <- all_data_clean %>% 
   ggplot() + geom_line(aes(real_time, humid_temp, color = factor(nodeid))) + theme_bw() + theme(legend.position="none")
 
-b <- all_data_clean %>% 
+b <- all_data_clean  %>%
   ggplot() + geom_line(aes(real_time, humidity, color = factor(nodeid))) + theme_bw() + theme(legend.position="none")
 
 c <- all_data_clean %>% 
@@ -128,12 +137,33 @@ c <- all_data_clean %>%
 grid.arrange(a,b,c,nrow=3)
 ```
 
-
 ```{r visualization}
-summary(all_data_clean)
-
 hist.data.frame(all_data_clean%>%
-                    dplyr::select(c(humidity, humid_temp, humid_adj, incident_par, reflected_par)))
+                    dplyr::select(c(humidity, humid_temp, humid_adj, voltage, incident_par, reflected_par)))
+```
+
+```{r remove additional outliers}
+hist(all_data_clean$incident_par, breaks = 30)
+
+summary(all_data_clean$incident_par)
+summary(all_data_clean$reflected_par)
+
+# all_data_clean %>% filter(incident_par > 2150)  # Problem with node 40 
+
+a <- all_data_clean %>% filter(nodeid == 40) %>% 
+  ggplot() + geom_line(aes(real_time, humid_temp, color = factor(nodeid))) + theme_bw() + theme(legend.position="none")
+
+b <- all_data_clean  %>% filter(nodeid == 40) %>% 
+  ggplot() + geom_line(aes(real_time, humidity, color = factor(nodeid))) + theme_bw() + theme(legend.position="none")
+
+c <- all_data_clean %>% filter(nodeid == 40) %>% 
+  ggplot() + geom_line(aes(real_time, voltage, color = factor(nodeid))) + theme_bw() + theme(legend.position="none")
+
+grid.arrange(a,b,c,nrow=3) # must be broken
+
+all_data_clean <- all_data_clean %>% filter(nodeid != 40)
+
+summary(all_data_clean) ## all good now
 ```
 
 
@@ -141,6 +171,132 @@ hist.data.frame(all_data_clean%>%
 save(all_data, file = "data/all_data.RData")
 save(all_data_clean, file = "data/all_data_clean.RData")
 ```
+
+
+
+## Data Exploration 
+
+Variables of interest: `humid_temp`, `humid_adj`, `incident_par`, `reflected_par`
+Variables with node: `nodeid`, `epoch`, `voltage`
+Variable with node location: `Height`, `Direc`, `Tree`
+
+
+```{r all names}
+names(all_data_clean)
+```
+
+Choose consistent day(s)
+
+```{r find a good time period}
+all_data_clean %>% 
+  mutate(date = as.Date(all_data_clean$real_time)) %>% 
+  group_by(date) %>% 
+  dplyr::summarize(`number of data point` = n()) %>% 
+  ggplot(aes(date,`number of data point`)) + geom_point() + geom_line()
+
+three_good_day <- all_data_clean %>%
+              mutate(date = as.character(as.Date(all_data_clean$real_time) ))%>% 
+              filter(date %in% c("2004-04-30", "2004-05-01", "2004-05-02"))
+
+one_day_data <- all_data_clean %>%
+              mutate(date = as.character(as.Date(all_data_clean$real_time) ))%>% 
+              filter(date %in% c("2004-05-15"))
+```
+
+1. 
+Strong positive correlation: `humid_temp` & `voltage`
+Strong negative correlation: `humid_temp` & `humid_adj`
+
+```{r pairwise scatterplot, message=F}
+three_good_day %>% 
+  select(humid_temp, humid_adj, incident_par, reflected_par, voltage, Height) %>% 
+  ggpairs() 
+
+one_day_data %>% 
+  filter(date == "2004-05-15") %>% 
+  select(humid_temp, humid_adj, incident_par, reflected_par, voltage, Height) %>% 
+  ggpairs()
+```
+
+2. `incident_par` positively correlated with `humid_temp` and `reflected_par`
+
+
+```{r, eval = F, echo =F}
+data_520 <- all_data_clean %>%
+              mutate(date = as.character(as.Date(all_data_clean$real_time) )) %>% 
+              filter(epoch == 1062)
+
+table(data_520$real_time)
+
+# one_day_data <- sonoma_data_net %>%
+#               filter(result_time > "2004-05-22 23:00:59.075427", result_time < "2004-05-23 23:00:59.075427")
+# one_day_data$real_time <- as.POSIXct(one_day_data$result_time)
+# ggplot(one_day_data) + geom_line(aes(real_time, hamatop))
+```
+
+
+3. Time Series
+
+```{r time seies plot}
+all_data_clean_height <- all_data_clean %>% 
+  mutate(`height level` = ifelse(Height > 50, "High", "Medium")) %>% 
+  mutate(`height level` = ifelse(Height < 30, "Low", `height level`)) 
+
+one_day_data_height <- one_day_data %>% 
+  mutate(`height level` = ifelse(Height > 50, "High", "Medium")) %>% 
+  mutate(`height level` = ifelse(Height < 30, "Low", `height level`)) 
+
+three_good_day_height <- three_good_day %>% 
+  mutate(`height level` = ifelse(Height > 50, "High", "Medium")) %>% 
+  mutate(`height level` = ifelse(Height < 30, "Low", `height level`)) 
+
+temp_height <- ggplot(one_day_data_height) + geom_line(aes(real_time, humid_temp, col = `height level`))
+humid_height <- ggplot(one_day_data_height) + geom_line(aes(real_time, humid_adj, col = `height level`))
+inc_height <- ggplot(one_day_data_height) + geom_line(aes(real_time, incident_par, col = `height level`))
+ref_height <- ggplot(one_day_data_height) + geom_line(aes(real_time, reflected_par, col = `height level`))
+grid.arrange(temp_height, humid_height, inc_height,ref_height, nrow =2)
+
+
+temp_height <- ggplot(three_good_day_height) + geom_line(aes(real_time, humid_temp, col = `height level`))
+humid_height <- ggplot(three_good_day_height) + geom_line(aes(real_time, humid_adj, col = `height level`))
+inc_height <- ggplot(three_good_day_height) + geom_line(aes(real_time, incident_par, col = `height level`))
+ref_height <- ggplot(three_good_day_height) + geom_line(aes(real_time, reflected_par, col = `height level`))
+grid.arrange(temp_height, humid_height, inc_height,ref_height, nrow =2)
+
+temp_height <- ggplot(all_data_clean_height) + geom_line(aes(real_time, humid_temp, col = `height level`))
+humid_height <- ggplot(all_data_clean_height) + geom_line(aes(real_time, humid_adj, col = `height level`))
+inc_height <- ggplot(all_data_clean_height) + geom_line(aes(real_time, incident_par, col = `height level`))
+ref_height <- ggplot(all_data_clean_height) + geom_line(aes(real_time, reflected_par, col = `height level`))
+grid.arrange(temp_height, humid_height, inc_height,ref_height, nrow =2)
+```
+
+
+```{r plot by direction and tree}
+ggplot(all_data_clean_height) + geom_line(aes(real_time, humid_temp)) + facet_wrap(~Direc)
+ggplot(all_data_clean_height) + geom_line(aes(real_time, humid_temp)) + facet_wrap(~Tree)
+```
+
+
+4. PCA
+
+```{r PCA}
+PCA_result <- prcomp(all_data_clean[c(8:9, 17:18)],center = TRUE, scale. = TRUE)
+summary(PCA_result)
+PCA_result
+```
+
+```{r Scree plot}
+eigenvalues <- (PCA_result$sdev)^2
+eigs_cum <- cumsum(eigenvalues)/sum(eigenvalues)
+a <- ggplot() + geom_point(aes(x = 1:length(eigenvalues), y=eigenvalues)) +
+  geom_line(aes(x = 1:length(eigenvalues), y=eigenvalues)) +
+  labs(x = "first PCs", y = "eigenvalues") + theme_bw()
+b <- ggplot() + geom_point(aes(x = 1:length(eigenvalues), y=eigs_cum)) +
+geom_line(aes(x = 1:length(eigenvalues), y=eigs_cum)) + theme_bw() +
+  labs(x = "first PCs", y = "fraction of total variance explained")
+grid.arrange(a,b, nrow = 1)
+```
+
 
 
 
