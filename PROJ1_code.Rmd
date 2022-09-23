@@ -298,6 +298,27 @@ grid.arrange(a,b, nrow = 1)
 ```
 
 
+```{r}
+a <- all_data_clean %>% 
+  mutate(date = as.Date(real_time), hour = format((all_data_clean$real_time), format = "%H") ) %>% 
+  group_by(date, hour) %>%
+  dplyr::summarize(avg.temp = mean(humid_temp), avg.humid = mean(humid_adj)) %>% 
+  mutate(time = as.POSIXct(paste(date, hour), format = "%Y-%m-%d %H")) %>% 
+  ggplot() + geom_line(aes(time, avg.temp)) 
+
+b <- all_data_clean %>% 
+  mutate(date = as.Date(real_time), hour = format((all_data_clean$real_time), format = "%H") ) %>% 
+  group_by(date, hour) %>%
+  dplyr::summarize(avg.temp = mean(humid_temp), avg.humid = mean(humid_adj)) %>% 
+  mutate(time = as.POSIXct(paste(date, hour), format = "%Y-%m-%d %H")) %>% 
+  ggplot() + geom_line(aes(time, avg.humid)) 
+
+grid.arrange(a,b,nrow=2)
+```
+
+
+
+
 
 
 
