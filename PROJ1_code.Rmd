@@ -151,15 +151,15 @@ summary(all_data_clean$reflected_par)
 # all_data_clean %>% filter(incident_par > 2150)  # Problem with node 40 
 
 a <- all_data_clean %>% filter(nodeid == 40) %>% 
-  ggplot() + geom_line(aes(real_time, humid_temp, color = factor(nodeid))) + theme_bw() + theme(legend.position="none")
+  ggplot() + geom_line(aes(real_time, incident_par, color = factor(nodeid))) + theme_bw() + theme(legend.position="none")
 
 b <- all_data_clean  %>% filter(nodeid == 40) %>% 
-  ggplot() + geom_line(aes(real_time, humidity, color = factor(nodeid))) + theme_bw() + theme(legend.position="none")
+  ggplot() + geom_line(aes(real_time, reflected_par, color = factor(nodeid))) + theme_bw() + theme(legend.position="none")
 
 c <- all_data_clean %>% filter(nodeid == 40) %>% 
   ggplot() + geom_line(aes(real_time, voltage, color = factor(nodeid))) + theme_bw() + theme(legend.position="none")
 
-grid.arrange(a,b,c,nrow=3) # must be broken
+grid.arrange(a,b,c,nrow=3) # node 40 must be broken
 
 all_data_clean <- all_data_clean %>% filter(nodeid != 40)
 
@@ -189,18 +189,18 @@ Choose consistent day(s)
 
 ```{r find a good time period}
 all_data_clean %>% 
-  mutate(date = as.Date(all_data_clean$real_time)) %>% 
-  group_by(date) %>% 
+  mutate(Date = as.Date(all_data_clean$real_time)) %>% 
+  group_by(Date) %>% 
   dplyr::summarize(`number of data point` = n()) %>% 
-  ggplot(aes(date,`number of data point`)) + geom_point() + geom_line()
+  ggplot(aes(Date,`number of data point`)) + geom_point() + geom_line()
 
 three_good_day <- all_data_clean %>%
-              mutate(date = as.character(as.Date(all_data_clean$real_time) ))%>% 
-              filter(date %in% c("2004-04-30", "2004-05-01", "2004-05-02"))
+              mutate(Date = as.character(as.Date(all_data_clean$real_time) ))%>% 
+              filter(Date %in% c("2004-04-30", "2004-05-01", "2004-05-02"))
 
 one_day_data <- all_data_clean %>%
-              mutate(date = as.character(as.Date(all_data_clean$real_time) ))%>% 
-              filter(date %in% c("2004-05-15"))
+              mutate(Date = as.character(as.Date(all_data_clean$real_time) ))%>% 
+              filter(Date %in% c("2004-05-15"))
 ```
 
 1. 
@@ -213,7 +213,6 @@ three_good_day %>%
   ggpairs() 
 
 one_day_data %>% 
-  filter(date == "2004-05-15") %>% 
   select(humid_temp, humid_adj, incident_par, reflected_par, voltage, Height) %>% 
   ggpairs()
 ```

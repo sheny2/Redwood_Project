@@ -27,7 +27,7 @@ library(kableExtra)
 library(pracma)
 library(Hmisc)
 ggplot2::theme_set(ggplot2::theme_bw())
-knitr::opts_chunk$set(out.width = "75%", fig.align = 'center')
+knitr::opts_chunk$set(fig.align = 'center')
 knitr::opts_chunk$set(fig.pos = "H")
 
 load("data/all_data.RData")
@@ -102,7 +102,7 @@ After conversion, all the voltage values matches readings in the log data file.
 Similarly significant, each value have a lower frequency in the net file than the log file, indicating the conversion is successful. 
 
 A unit conversion is also performed on variable `hamatop` and `hamabot`. 
-After research, we discovered that PAR measurements are stored in the unit of Lux. 
+After research, we discovered that the PAR measurements are stored in the unit of Lux. 
 Thus, we converted to the unit of PPFD ($\mu \text{mol} \ m^{-2} s^{-1}$) by a conversion factor of 54 — the conversion coefficient of sunlight since its the primary light source.
 
 \subsection{Time Restoration}
@@ -120,7 +120,11 @@ $$
 \text{result time}=\text{ 2004-05-07 18:24:58 } + (\text{epoch}-2812) \times 5 \text{min} 
 $$
 
-Utilizing this function, the data collection time in file `sonoma-data-log.csv` is restored. Utilizing the time variable in `sonoma-data-net.csv` as a reference, the calculated time matches with the real time data by a minor error within the order of a minute???.
+Utilizing this function, the data collection time in file `sonoma-data-log.csv` is restored. Utilizing the time variable in `sonoma-data-net.csv` as a reference, the calculated time matches with the real time data by a minor error.
+
+Furthermore, we noticed that the time variable in `sonoma-data-net.csv` is also suspiciously inaccurate, with higher temperature recorded during the nighttime. 
+We thus crossed-matched the `epoch` and time variable with those provided in @Tolle05amacroscope.
+Based on the match, we adjusted the time variable by approximately seven hours. 
 
 \subsection{Data Merging}
 After unit conversion, data in `sonoma-data-net.csv` and `sonoma-data-log.csv` are ready to be merged into a final data file. 
@@ -128,13 +132,28 @@ To perform this task, we first investigated repetitive entries within each data 
 
 \subsection{Outlier Rejection}
 
-In terms of outliers, the investigations by @Tolle05amacroscope suggest that low or malfunctioning batteries are the main cause of anomalous readings. 
+Upon a close examination of the histograms of variables of interests, we noticed that the PAR measurements for sensor node 40, although having a seemingly normal battery voltage, were unstable and quite abnormal as seen in Figure \ref{fig:node40}. Therefore, we removed the readings recorded by this node. 
+
+```{r show node 40, fig.cap="\\label{fig:node40} The anomaly readings from node 40", echo = F, cache=T, warning=F, out.width = "50%"}
+a <- all_data %>% filter(nodeid == 40) %>% 
+  ggplot() + geom_line(aes(real_time, incident_par, color = factor(nodeid))) + theme_bw() + theme(legend.position="none") +
+    labs(y = "Incident PAR", x = "")
+b <- all_data  %>% filter(nodeid == 40) %>% 
+  ggplot() + geom_line(aes(real_time, reflected_par, color = factor(nodeid))) + theme_bw() + theme(legend.position="none") +
+  labs(y = "Reflected PAR", x = "")
+c <- all_data %>% filter(nodeid == 40) %>% 
+  ggplot() + geom_line(aes(real_time, voltage, color = factor(nodeid))) + theme_bw() + theme(legend.position="none")
+grid.arrange(a,b,nrow=2) # node 40 must be broken
+```
+
+Moreover, the investigations by @Tolle05amacroscope suggest that low or malfunctioning batteries are the main cause of anomalous readings. 
 Specifically, the researchers found that once the battery voltage falls from a maximum of 3 volts to a minimum of about 2.4 volts, a node’s reading begins to rise far out of the normal range. 
 Therefore, we removed those readings taken when sensor's battery was not in the proper range. 
 In addition, we also removed the data that reported a `humidity` reading over 100%RH.
 Figure \ref{fig:voltage} presents the comparison of before and after removing anomalous sensor readings. 
 
-```{r clean voltage, fig.cap="\\label{fig:voltage} A comparison of removing anomalous sensor readings. Plots (a) (b) and (c) are the readings before removing anomalous data, and plots (d) (e) and (f) are the readings after removing anomalous data.", echo = F, cache=T, warning=F}
+
+```{r comparing voltage, fig.cap="\\label{fig:voltage} A comparison of removing anomalous sensor readings. Plots (a) (b) and (c) are the readings before removing anomalous data, and plots (d) (e) and (f) are the readings after removing anomalous data.", echo = F, cache=T, warning = F, out.width = "80%"}
 a <- all_data %>%
   ggplot() + geom_line(aes(real_time, humid_temp, color = factor(nodeid))) +
   ylim(0, 100) + labs(y = "Temperature", x = "", caption = "(a)") + 
@@ -165,10 +184,122 @@ f <- all_data_clean %>%
   labs(y = "Voltage", x = "", caption = "(f)") + 
   theme(legend.position = "none", plot.caption = element_text(hjust=0.5, size=rel(1.2)))
 
-grid.arrange(a,d,b,e,c,f,nrow=3)
+grid.arrange(a, d, b, e, c, f, nrow = 3)
 ```
 
+After converting units to correct range and removing wrong readings, we present the histograms of the four variables of interests in Figure \ref{fig:hist4}. The final data set after clean-up has 262,675 observations from 62 nodes, whose readings covered a time period from 2004-04-27 17:14:58 EDT to 2004-06-10 13:59:58 EDT. 
+
+```{r show histgrams, fig.cap="\\label{fig:hist4} The histgrams of four variables of interets", echo = F, cache=T, warning=F, out.width = "80%"}
+hist.data.frame(all_data_clean%>%
+                mutate(Temperature = humid_temp, Humidity = humid_adj, `Incident Par` = incident_par, `Reflected Par` = reflected_par) %>% 
+                    dplyr::select(c(Temperature, Humidity, `Incident Par`, `Reflected Par`)))
+```
+
+
 \section{Data Exploration}
+
+It could be worthwhile to examine the fluctuations of readings throughout a single day. 
+We decided to choose a time when there were few sensor failures and most of the available sensors worked normally. 
+Based on Figure \ref{fig:databydate}, we selected May 15, 2014 because the numbers of readings collected around that day were consistent and stable. 
+
+```{r available data, fig.cap="\\label{fig:databydate} The number of data points collected by each day of the experiment", echo = F, cache=T, warning=F, out.width = "50%"}
+all_data_clean %>% 
+  mutate(Date = as.Date(all_data_clean$real_time)) %>% 
+  group_by(Date) %>% 
+  dplyr::summarize(`Number of data point` = n()) %>% 
+  ggplot(aes(Date,`Number of data point`)) + geom_point() + geom_line(size = 1.5)
+```
+
+From Figure \ref{fig:pairwise_oneday}, we found strong correlations between *need to add more content here*
+
+```{r pairwise for one day, fig.cap="\\label{fig:pairwise_oneday} The pairwise scatterplots of variables of interests", echo = F, cache=T, warning=F, out.width = "70%"}
+one_day_data <- all_data_clean %>%
+              mutate(Date = as.character(as.Date(all_data_clean$real_time) ))%>% 
+              filter(Date %in% c("2004-05-15"))
+one_day_data %>% 
+  select(humid_temp, humid_adj, incident_par, reflected_par, voltage, Height) %>% 
+  ggpairs()
+```
+
+We also examined that time series plots of variables of interests within a single day. Figure \ref{fig:pairwise_oneday} shows that *need to add more content here*
+
+```{r timeseries for one day, fig.cap="\\label{fig:ts_oneday} The time series plot of one day's readings", echo = F, cache=T, warning=F, fig.height=6, fig.width=11}
+one_day_data_height <- one_day_data %>% 
+  mutate(`height level` = ifelse(Height > 45, "High", "Medium")) %>% 
+  mutate(`height level` = ifelse(Height < 30, "Low", `height level`)) 
+
+temp_height <- ggplot(one_day_data_height) + 
+  geom_line(aes(real_time, humid_temp, col = `height level`)) + labs(y = "Temperature", x = "", color = "Height") +
+  theme(text = element_text(size = 8))  +  guides(colour = guide_legend(nrow = 1))
+humid_height <- ggplot(one_day_data_height) + 
+  geom_line(aes(real_time, humid_adj, col = `height level`)) + labs(y = "Humidity", x = "") +
+    theme(text = element_text(size = 8))  +  guides(colour = guide_legend(nrow = 1))
+inc_height <- ggplot(one_day_data_height) + 
+  geom_line(aes(real_time, incident_par, col = `height level`)) + labs(y = "Incident PAR", x = "") +
+    theme(text = element_text(size = 8))  +  guides(colour = guide_legend(nrow = 1))
+ref_height <- ggplot(one_day_data_height) + 
+  geom_line(aes(real_time, reflected_par, col = `height level`)) + labs(y = "Reflected PAR", x = "") +
+    theme(text = element_text(size = 8))  +  guides(colour = guide_legend(nrow = 1))
+
+g_legend<-function(a.gplot){
+  tmp <- ggplot_gtable(ggplot_build(a.gplot))
+  leg <- which(sapply(tmp$grobs, function(x) x$name) == "guide-box")
+  legend <- tmp$grobs[[leg]]
+  return(legend)}
+
+height_legend <-g_legend(temp_height)
+
+grid.arrange(arrangeGrob(temp_height + theme(legend.position="none"),
+                         humid_height + theme(legend.position="none"),
+                         inc_height + theme(legend.position="none"), 
+                         ref_height + theme(legend.position="none"),
+                         nrow = 2),
+             height_legend, nrow = 2, heights = c(10, 1))
+```
+
+*Do we want to use 3 day? (Plots are ready here)* Figure \{fig:ts_3day}
+
+```{r timeseries for 3 days, fig.cap="\\label{fig:ts_3day} The time series plot of three days' readings", echo = F, cache=T, warning=F, fig.height=6, fig.width=11}
+
+three_good_day <- all_data_clean %>%
+              mutate(Date = as.character(as.Date(all_data_clean$real_time) ))%>% 
+              # filter(Date %in% c("2004-05-14", "2004-05-15", "2004-05-16"))
+              filter(Date %in% c("2004-04-30", "2004-05-01", "2004-05-02"))
+
+three_good_day_height <- three_good_day %>% 
+  mutate(`height level` = ifelse(Height > 45, "High", "Medium")) %>% 
+  mutate(`height level` = ifelse(Height < 30, "Low", `height level`)) 
+
+temp_height <- ggplot(three_good_day_height) + 
+  geom_line(aes(real_time, humid_temp, col = `height level`)) + labs(y = "Temperature", x = "", color = "Height") +
+  theme(text = element_text(size = 8))  +  guides(colour = guide_legend(nrow = 1))
+humid_height <- ggplot(three_good_day_height) + 
+  geom_line(aes(real_time, humid_adj, col = `height level`)) + labs(y = "Humidity", x = "") +
+    theme(text = element_text(size = 8))  +  guides(colour = guide_legend(nrow = 1))
+inc_height <- ggplot(three_good_day_height) + 
+  geom_line(aes(real_time, incident_par, col = `height level`)) + labs(y = "Incident PAR", x = "") +
+    theme(text = element_text(size = 8))  +  guides(colour = guide_legend(nrow = 1))
+ref_height <- ggplot(three_good_day_height) + 
+  geom_line(aes(real_time, reflected_par, col = `height level`)) + labs(y = "Reflected PAR", x = "") +
+    theme(text = element_text(size = 8))  +  guides(colour = guide_legend(nrow = 1))
+
+g_legend<-function(a.gplot){
+  tmp <- ggplot_gtable(ggplot_build(a.gplot))
+  leg <- which(sapply(tmp$grobs, function(x) x$name) == "guide-box")
+  legend <- tmp$grobs[[leg]]
+  return(legend)}
+
+height_legend <-g_legend(temp_height)
+
+grid.arrange(arrangeGrob(temp_height + theme(legend.position="none"),
+                         humid_height + theme(legend.position="none"),
+                         inc_height + theme(legend.position="none"), 
+                         ref_height + theme(legend.position="none"),
+                         nrow = 2),
+             height_legend, nrow = 2, heights = c(10, 1))
+```
+
+
 
 
 \section{Findings}
