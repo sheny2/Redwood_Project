@@ -217,7 +217,7 @@ one_day_data <- all_data_clean %>%
               mutate(Date = as.character(as.Date(all_data_clean$real_time) ))%>% 
               filter(Date %in% c("2004-05-15"))
 one_day_data %>% 
-  select(humid_temp, humid_adj, incident_par, reflected_par, voltage, Height) %>% 
+  select(humid_temp, humid_adj, incident_par, reflected_par, voltage, Height) %>%   # do we need voltage
   ggpairs()
 ```
 
