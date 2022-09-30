@@ -255,6 +255,23 @@ ref_height <- ggplot(all_data_clean) + geom_line(aes(real_time, reflected_par, c
 grid.arrange(temp_height, humid_height, inc_height,ref_height, nrow =2)
 ```
 
+```{r voltage,fig.height=3, fig.width=11}
+a <- ggplot(all_data_clean %>%
+              mutate(Date = as.character(as.Date(all_data_clean$real_time, "US/Pacific") ))%>% 
+              filter(Date %in% c("2004-05-10"))) + geom_line(aes(real_time, voltage, color = factor(nodeid))) + theme(legend.position="none")
+
+b <- ggplot(all_data_clean %>%
+              mutate(Date = as.character(as.Date(all_data_clean$real_time, "US/Pacific") ))%>% 
+              filter(Date %in% c("2004-05-15"))) + geom_line(aes(real_time, voltage, color = factor(nodeid))) + theme(legend.position="none")
+
+c <- ggplot(all_data_clean %>%
+              mutate(Date = as.character(as.Date(all_data_clean$real_time, "US/Pacific") ))%>% 
+              filter(Date %in% c("2004-05-20"))) + geom_line(aes(real_time, voltage, color = factor(nodeid))) + theme(legend.position="none")
+
+grid.arrange(a,b,c, nrow = 1)
+```
+
+
 
 ```{r plot by direction and tree}
 ggplot(all_data_clean) + geom_line(aes(real_time, humid_temp)) + facet_wrap(~Direc)

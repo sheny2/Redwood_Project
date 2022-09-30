@@ -225,18 +225,18 @@ one_day_data %>%
 
 We also examined that time series plots of variables of interests within a single day. Figure \ref{fig:pairwise_oneday} shows that *need to add more content here*
 
-```{r timeseries for one day, fig.cap="\\label{fig:ts_oneday} The time series plot of one day's readings", echo = F, cache=T, warning=F, fig.height=6, fig.width=11}
+```{r timeseries for one day, fig.cap="\\label{fig:ts_oneday} The time series plot of one day's readings", echo = F, cache=T, warning=F, fig.height=5, fig.width=11}
 temp_height <- ggplot(one_day_data) + 
-  geom_line(aes(real_time, humid_temp, col = `height level`)) + labs(y = "Temperature", x = "", color = "Height") +
+  geom_line(aes(real_time, humid_temp, col = `height level`), size = 0.6) + labs(y = "Temperature", x = "", color = "Height") +
   theme(text = element_text(size = 8))  +  guides(colour = guide_legend(nrow = 1))
 humid_height <- ggplot(one_day_data) + 
-  geom_line(aes(real_time, humid_adj, col = `height level`)) + labs(y = "Humidity", x = "") +
+  geom_line(aes(real_time, humid_adj, col = `height level`), size = 0.6) + labs(y = "Humidity", x = "") +
     theme(text = element_text(size = 8))  +  guides(colour = guide_legend(nrow = 1))
 inc_height <- ggplot(one_day_data) + 
-  geom_line(aes(real_time, incident_par, col = `height level`)) + labs(y = "Incident PAR", x = "") +
+  geom_point(aes(real_time, incident_par, col = `height level`), size = 0.8) + labs(y = "Incident PAR", x = "") +
     theme(text = element_text(size = 8))  +  guides(colour = guide_legend(nrow = 1))
 ref_height <- ggplot(one_day_data) + 
-  geom_line(aes(real_time, reflected_par, col = `height level`)) + labs(y = "Reflected PAR", x = "") +
+  geom_point(aes(real_time, reflected_par, col = `height level`), size = 0.8) + labs(y = "Reflected PAR", x = "") +
     theme(text = element_text(size = 8))  +  guides(colour = guide_legend(nrow = 1))
 
 g_legend <- function(a.gplot){
@@ -256,24 +256,23 @@ grid.arrange(arrangeGrob(temp_height + theme(legend.position="none"),
 
 *Do we want to use 3 day? (Plots are ready here)* Figure \ref{fig:ts_3day}
 
-```{r timeseries for 3 days, fig.cap="\\label{fig:ts_3day} The time series plot of three days' readings", echo = F, cache=T, warning=F, fig.height=6, fig.width=11}
-
+```{r timeseries for 3 days, fig.cap="\\label{fig:ts_3day} The time series plot of three days' readings", echo = F, cache=T, warning=F, fig.height=5, fig.width=11}
 three_good_day <- all_data_clean %>%
               mutate(Date = as.character(as.Date(all_data_clean$real_time, "US/Pacific") ))%>% 
               # filter(Date %in% c("2004-05-14", "2004-05-15", "2004-05-16"))
               filter(Date %in% c("2004-04-30", "2004-05-01", "2004-05-02"))
 
 temp_height <- ggplot(three_good_day) + 
-  geom_line(aes(real_time, humid_temp, col = `height level`)) + labs(y = "Temperature", x = "", color = "Height") +
+  geom_line(aes(real_time, humid_temp, col = `height level`), size = 0.3) + labs(y = "Temperature", x = "", color = "Height") +
   theme(text = element_text(size = 8))  +  guides(colour = guide_legend(nrow = 1))
 humid_height <- ggplot(three_good_day) + 
-  geom_line(aes(real_time, humid_adj, col = `height level`)) + labs(y = "Humidity", x = "") +
+  geom_line(aes(real_time, humid_adj, col = `height level`), size = 0.3) + labs(y = "Humidity", x = "") +
     theme(text = element_text(size = 8))  +  guides(colour = guide_legend(nrow = 1))
 inc_height <- ggplot(three_good_day) + 
-  geom_line(aes(real_time, incident_par, col = `height level`)) + labs(y = "Incident PAR", x = "") +
+  geom_point(aes(real_time, incident_par, col = `height level`), size = 0.6) + labs(y = "Incident PAR", x = "") +
     theme(text = element_text(size = 8))  +  guides(colour = guide_legend(nrow = 1))
 ref_height <- ggplot(three_good_day) + 
-  geom_line(aes(real_time, reflected_par, col = `height level`)) + labs(y = "Reflected PAR", x = "") +
+  geom_point(aes(real_time, reflected_par, col = `height level`), size = 0.6) + labs(y = "Reflected PAR", x = "") +
     theme(text = element_text(size = 8))  +  guides(colour = guide_legend(nrow = 1))
 
 height_legend <-g_legend(temp_height)
@@ -287,7 +286,7 @@ grid.arrange(arrangeGrob(temp_height + theme(legend.position="none"),
 ```
 
 
-```{r PCA all, fig.cap="\\label{fig:pca_all} Scree plot and total variation plot suggest that two PCs are sufficient low-dimentional representation to approximate the data with the four key variables of interests", echo = F, cache=T, warning=F, out.width = "50%", message = F}
+```{r PCA all, fig.cap="\\label{fig:pca_all} Scree plot and total variation plot suggest that two PCs are sufficient low-dimentional representation to approximate the data with the four key variables of interests", echo = F, cache=T, warning=F, fig.height=2, fig.width=5, message = F}
 PCA_result <- prcomp(all_data_clean[c(8:9, 17:18)],center = TRUE, scale. = TRUE)
 # summary(PCA_result)
 # PCA_result
@@ -377,13 +376,13 @@ EM_plot <- ggplot() + geom_point(aes(PCA_result_2_day$x[, 1], PCA_result_2_day$x
 grid.arrange(true_plot, k_means_plot, EM_plot, nrow = 1)
 ```
 
-```{r two day compare, fig.cap="\\label{fig:compare_2_day} The key difference between May 1 and May 17 lies in their temperature and humidity.", echo = F, cache=T, warning=F, out.width="65%"}
+```{r two day compare, fig.cap="\\label{fig:compare_2_day} The key difference between May 1 and May 17 lies in their temperature and humidity.", echo = F, cache=T, warning=F, fig.height=2.5, fig.width=5.5}
 temp_two_day <- ggplot(two_day) + 
-  geom_boxplot(aes(hour, humid_temp, col = date)) + labs(y = "Temperature", x = "", color = "Date") +
+  geom_boxplot(aes(hour, humid_temp, col = date)) + labs(y = "Temperature", x = "Hour", color = "Date") +
   theme(text = element_text(size = 8))  +  guides(colour = guide_legend(nrow = 1))
 
 humid_two_day <- ggplot(two_day) + 
-  geom_boxplot(aes(hour, humid_adj, col = date)) + labs(y = "Humidity", x = "") +
+  geom_boxplot(aes(hour, humid_adj, col = date)) + labs(y = "Humidity", x = "Hour") +
     theme(text = element_text(size = 8))  +  guides(colour = guide_legend(nrow = 1))
 
 two_day_legend <- g_legend(temp_two_day)
@@ -434,7 +433,7 @@ grid.arrange(true_plot, k_means_plot, EM_plot, nrow = 1)
 \section{Critiques}
 
 
-```{r log of 3a, fig.cap="\\label{fig:hist_log} Histograms for variables of interests with log transformation", echo = F, cache=T, warning=F, out.width = "55%", message = F}
+```{r log of 3a, fig.cap="\\label{fig:hist_log} Histograms for variables of interests with log transformation.", echo = F, cache=T, warning=F, out.width = "50%", message = F}
 hist.data.frame(all_data_clean%>%
                   mutate(log_temp =log(humid_temp), log_humid = log(humid_adj), 
                          log_incident_par = log(incident_par), log_reflected_par = log(reflected_par)) %>% 
@@ -442,8 +441,30 @@ hist.data.frame(all_data_clean%>%
 ```
 
 
+\newpage
+
+\section{Appendix}
+
+```{r voltage by day,fig.height=3, fig.width=11, fig.cap="\\label{fig:voltage_day} Daily voltage readings on May 15 and May 20.", echo = F, cache=T}
+a <- ggplot(all_data_clean %>%
+              mutate(Date = as.character(as.Date(all_data_clean$real_time, "US/Pacific") ))%>% 
+              filter(Date %in% c("2004-05-10"))) + geom_line(aes(real_time, voltage, color = factor(nodeid))) + theme(legend.position="none")
+
+b <- ggplot(all_data_clean %>%
+              mutate(Date = as.character(as.Date(all_data_clean$real_time, "US/Pacific") ))%>% 
+              filter(Date %in% c("2004-05-15"))) + geom_line(aes(real_time, voltage, color = factor(nodeid))) + theme(legend.position="none")
+
+grid.arrange(a,b, nrow = 1)
+```
 
 
-
+```{r node data, fig.cap="\\label{fig:data_by_nde} The number of data points collected by each functional node.", message = F, warning= F, echo = F, cache=T, out.width="60%"}
+all_data_clean %>% 
+  group_by(nodeid, `height level`) %>% 
+  dplyr::summarize(`Number of data point` = n()) %>% 
+  ggplot() + geom_point(aes(nodeid,`Number of data point`, color = `height level`), size = 2) +
+   geom_text(aes(nodeid,`Number of data point`, label=nodeid), size = 3) 
+# good record from 42, 197, 14
+```
 
 \section{Reference}
