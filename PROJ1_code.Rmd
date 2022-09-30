@@ -15,12 +15,13 @@ library(mosaic)
 library(GGally)
 library(caret)
 library(ggfortify)
-#library(ggbiplot)
+library(ggbiplot)
 library(gridExtra)
 library(kableExtra)
 library(pracma)
 library(Hmisc)
 library(lubridate)
+library(mclust)
 ggplot2::theme_set(ggplot2::theme_bw())
 knitr::opts_chunk$set(out.width = "100%", fig.align = 'center')
 ```
@@ -211,7 +212,7 @@ one_day_data <- all_data_clean %>%
 all_data_clean %>% 
   group_by(nodeid, `height level`) %>% 
   dplyr::summarize(`number of data point` = n()) %>% 
-  ggplot() + geom_point(aes(nodeid,`number of data point`, color = `height level`)) +
+  ggplot() + geom_point(aes(nodeid,`number of data point`, color = `height level`), size = 2) +
    geom_text(aes(nodeid,`number of data point`, label=nodeid), size = 3) 
 # good record from 42, 197, 14
 ```
@@ -277,12 +278,27 @@ grid.arrange(temp_height, humid_height, inc_height,ref_height, nrow =2)
 
 4. PCA
 
-```{r PCA}
+```{r PCA eval = F}
 # PCA_result <- prcomp(all_data_clean %>% select("humid_temp","humid_adj", "incident_par", "reflected_par", "Height") ,center = TRUE, scale. = TRUE)
 
 PCA_result <- prcomp(all_data_clean[c(8:9, 17:18)],center = TRUE, scale. = TRUE)
 summary(PCA_result)
 PCA_result
+
+autoplot(PCA_result, label = F, label.size = 3,
+         loadings = TRUE, loadings.label = TRUE, 
+         loadings.label.size  = 3) + theme_bw()
+
+
+ggbiplot(pcobj = PCA_result, choices = c(1,2),
+                  obs.scale = 1, var.scale = 1,  # Scaling of axis
+                  labels.size = 4, varname.size = 5,
+                  varname.abbrev = TRUE,  # Abbreviate variable names (TRUE)
+                  var.axes = TRUE,      # Remove variable vectors (TRUE)
+                  circle = TRUE,        # Add unit variance circle (TRUE)
+                  ellipse = FALSE, groups = as.character(as.Date(all_data_clean$real_time, "PDT")))
+
+table(all_data_clean$Height)
 ```
 
 ```{r Scree plot}
@@ -298,14 +314,18 @@ grid.arrange(a,b, nrow = 1)
 ```
 
 ```{r PCA one day plot}
-PCA_result_1_day <- prcomp(one_day_data[c(8:9, 17:18)],center = TRUE, scale. = TRUE)
+one_day_data_3h <- one_day_data %>% 
+  mutate(date = as.Date(real_time, "US/Pacific"), hour = format((one_day_data$real_time), format = "%H") ) %>% 
+  filter(hour %in% c("00", "12"))
+
+PCA_result_1_day <- prcomp(one_day_data_3h[c(8:9, 17:18)],center = TRUE, scale. = TRUE)
 summary(PCA_result_1_day)
 PCA_result_1_day
 
-one_day_data$daytime <- ifelse(one_day_data$real_time >= "2004-05-15 07:00:00 PDT", "Day","Dark")
-one_day_data$daytime <- ifelse(one_day_data$real_time >= "2004-05-15 18:00:00 PDT", "Dark",one_day_data$daytime)
+# one_day_data$daytime <- ifelse(one_day_data$real_time >= "2004-05-15 07:00:00 PDT", "Day","Dark")
+# one_day_data$daytime <- ifelse(one_day_data$real_time >= "2004-05-15 18:00:00 PDT", "Dark",one_day_data$daytime)
 
-autoplot(PCA_result_1_day, label = TRUE, label.size = 3,
+autoplot(PCA_result_1_day, label = F, label.size = 3,
          loadings = TRUE, loadings.label = TRUE, 
          loadings.label.size  = 3) + theme_bw()
 
@@ -315,15 +335,198 @@ ggbiplot(pcobj = PCA_result_1_day, choices = c(1,2),
                   varname.abbrev = TRUE,  # Abbreviate variable names (TRUE)
                   var.axes = TRUE,      # Remove variable vectors (TRUE)
                   circle = TRUE,        # Add unit variance circle (TRUE)
-                  ellipse = FALSE, groups = one_day_data$daytime)
+                  ellipse = FALSE, groups = one_day_data_3h$hour)
+
+```
+
+```{r one day clustering}
+PCA_result_1_day_dat <- as_tibble(PCA_result_1_day$x[,1:2])
+
+
+cl_km <- kmeans(PCA_result_1_day_dat, 2, nstart = 25)
+z_km <- cl_km$cluster
+kmeans_center <- cl_km$centers
+k_means_plot <- ggplot() + geom_point(aes(PCA_result_1_day$x[, 1], PCA_result_1_day$x[, 2], col=factor(z_km)), size = 0.6) + labs(x = "PC1", y = "PC2", title = "K-means Algorithm", color = "K-mean Cluster")
+
+model_GMM <- Mclust(PCA_result_1_day_dat, G = 2)
+z_GMM = apply(model_GMM$z, 1, which.max)
+GMM_means <- model_GMM$parameters$mean
+EM_plot <- ggplot() + geom_point(aes(PCA_result_1_day$x[, 1], PCA_result_1_day$x[, 2], col=factor(z_GMM)), size = 0.6) + labs(x = "PC1", y = "PC2", title = "GMM Using EM", color = "GMM Cluster")
+
+ggplot(PCA_result_1_day_dat) + 
+  geom_point(aes(PC1, PC2, color = one_day_data_3h$hour), size = 0.6) 
+
+k_means_plot
+EM_plot
 ```
 
 
-```{r}
-ggplot(one_day_data) + geom_point(aes(humid_temp,humid_adj ))
+```{r PCA multiple day}
+three_good_day_3h <- all_data_clean %>%
+          mutate(date = as.character(as.Date(real_time, "US/Pacific")), hour = format((all_data_clean$real_time), format = "%H") ) %>% 
+              filter(date %in% c("2004-05-02", "2004-05-17")) 
+
+# all_data_clean %>%
+#       mutate(date = as.character(as.Date(real_time, "US/Pacific")), hour = format((all_data_clean$real_time), format = "%H") ) %>% 
+#               filter(date %in% c("2004-05-02")) %>%
+#               ggplot() + geom_line(aes(real_time, humid_adj, col = `height level`))
+
+
+PCA_result_3_day <- prcomp(three_good_day_3h[c(8:9, 17:18)],center = TRUE, scale. = TRUE)
+summary(PCA_result_3_day)
+PCA_result_3_day
+
+autoplot(PCA_result_3_day, label = TRUE, label.size = 3,
+         loadings = TRUE, loadings.label = TRUE, 
+         loadings.label.size  = 3) + theme_bw()
+
+ggbiplot(pcobj = PCA_result_3_day, choices = c(1,2),
+                  obs.scale = 1, var.scale = 1,  # Scaling of axis
+                  labels.size = 4, varname.size = 5,
+                  varname.abbrev = TRUE,  # Abbreviate variable names (TRUE)
+                  var.axes = TRUE,      # Remove variable vectors (TRUE)
+                  circle = TRUE,        # Add unit variance circle (TRUE)
+                  ellipse = FALSE, groups = three_good_day_3h$date)
 ```
 
 
+```{r 3 day clustering}
+PCA_result_3_day_dat <- as_tibble(PCA_result_3_day$x[,1:2])
+
+
+cl_km <- kmeans(PCA_result_3_day_dat, 2, nstart = 25)
+z_km <- cl_km$cluster
+kmeans_center <- cl_km$centers
+k_means_plot <- ggplot() + geom_point(aes(PCA_result_3_day$x[, 1], PCA_result_3_day$x[, 2], col=factor(z_km)), size = 0.6) + labs(x = "PC1", y = "PC2", title = "K-means Algorithm", color = "K-mean Cluster")
+
+model_GMM <- Mclust(PCA_result_3_day_dat, G=2)
+z_GMM = apply(model_GMM$z, 1, which.max)
+GMM_means <- model_GMM$parameters$mean
+EM_plot <- ggplot() + geom_point(aes(PCA_result_3_day$x[, 1], PCA_result_3_day$x[, 2], col=factor(z_GMM)), size = 0.6) + labs(x = "PC1", y = "PC2", title = "GMM Using EM", color = "GMM Cluster")
+
+ggplot(PCA_result_3_day_dat) + 
+  geom_point(aes(PC1, PC2, color = three_good_day_3h$date), size = 0.6) 
+k_means_plot
+EM_plot
+
+# ggplot(PCA_result_3_day_dat) + 
+#   geom_point(aes(PC1, PC2, color = three_good_day_3h$date), size = 0.6) 
+```
+
+```{r two node pca}
+two_node_data <- all_data_clean %>%
+          mutate(date = as.character(as.Date(real_time, "US/Pacific")), hour = format((all_data_clean$real_time), format = "%H") ) %>% 
+              filter(hour %in% c("12")) %>% 
+              filter(nodeid %in% c(14, 42)) 
+
+PCA_two_node <- prcomp(two_node_data[c(8:9, 17:18)],center = TRUE, scale. = TRUE)
+summary(PCA_two_node)
+PCA_two_node
+
+
+ggbiplot(pcobj = PCA_two_node, choices = c(1,2),
+                  obs.scale = 1, var.scale = 1,  # Scaling of axis
+                  labels.size = 4, varname.size = 5,
+                  varname.abbrev = TRUE,  # Abbreviate variable names (TRUE)
+                  var.axes = TRUE,      # Remove variable vectors (TRUE)
+                  circle = TRUE,        # Add unit variance circle (TRUE)
+                  ellipse = FALSE, groups = factor(two_node_data$nodeid))
+
+
+```
+
+
+
+```{r 2 node clustering}
+PCA_two_node_dat <- as_tibble(PCA_two_node$x[,1:2])
+
+cl_km <- kmeans(PCA_two_node_dat, 2, nstart = 25)
+z_km <- cl_km$cluster
+kmeans_center <- cl_km$centers
+k_means_plot <- ggplot() + geom_point(aes(PCA_two_node$x[, 1], PCA_two_node$x[, 2], col=factor(z_km)), size = 0.6) + labs(x = "PC1", y = "PC2", title = "K-means Algorithm", color = "K-mean Cluster")
+
+model_GMM <- Mclust(PCA_two_node_dat, G=2)
+z_GMM = apply(model_GMM$z, 1, which.max)
+GMM_means <- model_GMM$parameters$mean
+EM_plot <- ggplot() + geom_point(aes(PCA_two_node$x[, 1], PCA_two_node$x[, 2], col=factor(z_GMM)), size = 0.6) + labs(x = "PC1", y = "PC2", title = "GMM Using EM", color = "GMM Cluster")
+
+ggplot(PCA_two_node_dat) + 
+  geom_point(aes(PC1, PC2, color = factor(two_node_data$nodeid)), size = 0.6) 
+k_means_plot
+EM_plot
+
+table(two_node_data$Height)
+```
+
+
+### Graph critiques
+
+```{r log of 3a}
+hist.data.frame(all_data_clean%>%
+                  mutate(log_temp =log(humid_temp), log_humid = log(humid_adj), 
+                         log_incident_par = log(incident_par), log_reflected_par = log(reflected_par)) %>% 
+                    dplyr::select(c(log_temp, log_humid, log_incident_par, log_reflected_par)))
+
+# hist(log(all_data_clean$incident_par))
+```
+```{r adjust 3c}
+all_data_clean %>% filter(as.Date(real_time, "US/Pacific") == "2004-05-01") %>% 
+  group_by(factor(Height)) %>% dplyr::summarize(mean_temp = mean(humid_temp)) %>% 
+  ggplot(aes(x = as.numeric(`factor(Height)`), y = mean_temp)) + geom_point() + geom_smooth(se = F) + 
+   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 0.5)) 
+
+
+all_data_clean %>% filter(as.Date(real_time, "US/Pacific") == "2004-05-01") %>% 
+  group_by(factor(Height)) %>% dplyr::summarize(mean_humid = mean(humid_adj)) %>% 
+  ggplot(aes(x = as.numeric(`factor(Height)`), y = mean_humid)) + geom_point() + geom_smooth(se = F) + 
+   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 0.5)) 
+  # geom_hline(yintercept = mean(all_data_clean$humid_temp)) + coord_flip()
+
+
+
+all_data_clean %>% filter(as.Date(real_time, "US/Pacific") == "2004-05-01") %>% 
+  ggplot(aes(x = real_time, y = incident_par)) + geom_point(alpha = 0.7) + geom_smooth(se = F)
+```
+
+
+```{r adjust figrue 7}
+
+yield_compare <- rbind(sonoma_data_log_with_time, sonoma_data_net_real_vol) 
+
+yield_compare %>% 
+  mutate(source = ifelse(result_time == "2004-11-10 14:25:00", "log", "net")) %>% 
+  mutate(date = as.Date(real_time, "US/Pacific")) %>% 
+  group_by(date, source) %>% 
+  dplyr::summarize(`number of data yield` = n()) %>% 
+  ggplot(aes(date, `number of data yield`)) + geom_point() + geom_line() + labs(x = "") + facet_wrap(~source)
+# + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 0.5)) 
+
+yield_compare %>% 
+  mutate(source = ifelse(result_time == "2004-11-10 14:25:00", "log", "net")) %>% 
+  mutate(date = as.Date(real_time, "US/Pacific"))  %>% 
+  ggplot(aes(date)) + geom_bar()+ facet_wrap(~source)
+  
+  
+left_join(yield_compare, mote_location_data, by = c("nodeid" = "ID")) %>% 
+  na.omit() %>% 
+  mutate(source = ifelse(result_time == "2004-11-10 14:25:00", "log", "net")) %>% 
+  mutate(date = as.Date(real_time, "US/Pacific")) %>% 
+  group_by(Height, source) %>% 
+  dplyr::summarize(`number of data yield` = n()) %>% 
+  ggplot(aes(Height, `number of data yield`)) + geom_point() + geom_line()+ labs(x = "") + facet_wrap(~source)
+
+left_join(yield_compare, mote_location_data, by = c("nodeid" = "ID")) %>% 
+    na.omit() %>% 
+  mutate(source = ifelse(result_time == "2004-11-10 14:25:00", "log", "net")) %>% 
+  mutate(date = as.Date(real_time, "US/Pacific")) %>% 
+  ggplot(aes(as.factor(Height))) + geom_bar()+ facet_wrap(~source) +
+     theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 0.5))  + coord_flip() + 
+  labs(x = "Height", y = "Data Yield")
+```
+
+
+
+## backup below; don't run
 
 ```{r mean plot}
 a <- all_data_clean %>% 
@@ -343,5 +546,78 @@ b <- all_data_clean %>%
 grid.arrange(a,b,nrow=2)
 ```
 
+
+```{r daily mean data}
+daily_data <- all_data_clean %>% 
+  mutate(date = as.Date(real_time, "US/Pacific"), hour = format((all_data_clean$real_time), format = "%H") ) %>% 
+  group_by(date) %>%
+  dplyr::summarize(avg.temp = mean(humid_temp), avg.humid = mean(humid_adj), max_inc = max(incident_par), max_ref = max(reflected_par)) 
+
+PCA_result_daily <- prcomp(daily_data[c(2:5)], center = TRUE, scale. = TRUE)
+summary(PCA_result_daily)
+PCA_result_daily
+
+autoplot(PCA_result_daily, label = F, label.size = 3,
+         loadings = TRUE, loadings.label = TRUE, 
+         loadings.label.size  = 3) + theme_bw()
+
+ggbiplot(pcobj = PCA_result_daily, choices = c(1,2),
+                  obs.scale = 1, var.scale = 1,  # Scaling of axis
+                  labels.size = 1.5, varname.size = 5,
+                  varname.abbrev = TRUE,  # Abbreviate variable names (TRUE)
+                  var.axes = TRUE,      # Remove variable vectors (TRUE)
+                  circle = TRUE,        # Add unit variance circle (TRUE)
+                  ellipse = FALSE,
+                labels = daily_data$date )
+
+
+PCA_result_daily_dat <- as_tibble(PCA_result_daily$x[,1:2])
+
+ggplot(PCA_result_daily_dat) + 
+  geom_point(aes(PC1, PC2, color = daily_data$avg.humid), size = 1) 
+
+cl_km <- kmeans(PCA_result_daily_dat, 2, nstart = 25)
+z_km <- cl_km$cluster
+kmeans_center <- cl_km$centers
+k_means_plot <- ggplot() + geom_point(aes(PCA_result_daily$x[, 1], PCA_result_daily$x[, 2], col=factor(z_km)), size = 1.5) + labs(x = "PC1", y = "PC2", title = "K-means Algorithm", color = "K-mean Cluster")
+
+model_GMM <- Mclust(PCA_result_daily_dat, G=2)
+z_GMM = apply(model_GMM$z, 1, which.max)
+GMM_means <- model_GMM$parameters$mean
+EM_plot <- ggplot() + geom_point(aes(PCA_result_daily$x[, 1], PCA_result_daily$x[, 2], col=factor(z_GMM)), size = 1.5) + labs(x = "PC1", y = "PC2", title = "GMM Using EM", color = "GMM Cluster")
+
+k_means_plot
+EM_plot
+
+```
+
+
+
+```{r, eval = F}
+daily_2h_data <- all_data_clean %>% 
+  mutate(date = as.Date(real_time, "US/Pacific"), hour = format((all_data_clean$real_time), format = "%H") ) %>% 
+  filter(hour %in% c( "00"))
+
+ggplot(daily_2h_data) + geom_boxplot(aes(factor(date), humid_temp))
+
+ggplot(daily_2h_data) + geom_point(aes(date, humid_temp, color = `height level`), size = 0.7)
+
+PCA_result_hourly <- prcomp(daily_2h_data[c(8:9, 17:18)],center = TRUE, scale. = TRUE)
+summary(PCA_result_hourly)
+PCA_result_hourly
+
+autoplot(PCA_result_hourly, label = TRUE, label.size = 3,
+         loadings = TRUE, loadings.label = TRUE, 
+         loadings.label.size  = 3) + theme_bw()
+
+ggbiplot(pcobj = PCA_result_hourly, choices = c(1,2),
+                  obs.scale = 1, var.scale = 1,  # Scaling of axis
+                  labels.size = 4, varname.size = 5,
+                  varname.abbrev = TRUE,  # Abbreviate variable names (TRUE)
+                  var.axes = TRUE,      # Remove variable vectors (TRUE)
+                  circle = TRUE,        # Add unit variance circle (TRUE)
+                  ellipse = FALSE, groups = daily_2h_data$hour)
+
+```
 
 
