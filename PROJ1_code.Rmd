@@ -336,7 +336,6 @@ ggbiplot(pcobj = PCA_result_1_day, choices = c(1,2),
                   var.axes = TRUE,      # Remove variable vectors (TRUE)
                   circle = TRUE,        # Add unit variance circle (TRUE)
                   ellipse = FALSE, groups = one_day_data_3h$hour)
-
 ```
 
 ```{r one day clustering}
@@ -483,14 +482,12 @@ all_data_clean %>% filter(as.Date(real_time, "US/Pacific") == "2004-05-01") %>%
   # geom_hline(yintercept = mean(all_data_clean$humid_temp)) + coord_flip()
 
 
-
 all_data_clean %>% filter(as.Date(real_time, "US/Pacific") == "2004-05-01") %>% 
   ggplot(aes(x = real_time, y = incident_par)) + geom_point(alpha = 0.7) + geom_smooth(se = F)
 ```
 
 
 ```{r adjust figrue 7}
-
 yield_compare <- rbind(sonoma_data_log_with_time, sonoma_data_net_real_vol) 
 
 yield_compare %>% 

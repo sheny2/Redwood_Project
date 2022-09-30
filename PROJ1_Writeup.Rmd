@@ -21,12 +21,12 @@ library(mosaic)
 library(GGally)
 library(caret)
 library(ggfortify)
-# library(ggbiplot)
+library(ggbiplot)
 library(gridExtra)
 library(kableExtra)
 library(pracma)
 library(Hmisc)
-library(Mclust)
+library(mclust)
 ggplot2::theme_set(ggplot2::theme_bw())
 knitr::opts_chunk$set(fig.align = 'center')
 knitr::opts_chunk$set(fig.pos = "H")
@@ -190,7 +190,7 @@ grid.arrange(a, d, b, e, c, f, nrow = 3)
 
 After converting units to correct range and removing wrong readings, we present the histograms of the four variables of interests in Figure \ref{fig:hist4}. The final data set after clean-up has 262,675 observations from 62 nodes, whose readings covered a time period from 2004-04-27 17:14:58 EDT to 2004-06-10 13:59:58 EDT. 
 
-```{r show histgrams, fig.cap="\\label{fig:hist4} The histgrams of four variables of interets", echo = F, cache=T, warning=F, out.width = "80%"}
+```{r show histgrams, fig.cap="\\label{fig:hist4} The histgrams of four variables of interets", echo = F, cache=T, warning=F, out.width = "55%"}
 hist.data.frame(all_data_clean%>%
                 mutate(Temperature = humid_temp, Humidity = humid_adj, `Incident Par` = incident_par, `Reflected Par` = reflected_par) %>% 
                     dplyr::select(c(Temperature, Humidity, `Incident Par`, `Reflected Par`)))
@@ -213,10 +213,11 @@ all_data_clean %>%
 
 From Figure \ref{fig:pairwise_oneday}, we found strong correlations between *need to add more content here*
 
-```{r pairwise for one day, fig.cap="\\label{fig:pairwise_oneday} The pairwise scatterplots of variables of interests", echo = F, cache=T, warning=F, out.width = "70%"}
+```{r pairwise for one day, fig.cap="\\label{fig:pairwise_oneday} The pairwise scatterplots of variables of interests", echo = F, cache=T, warning=F, out.width = "60%", message = F}
 one_day_data <- all_data_clean %>%
-              mutate(Date = as.character(as.Date(all_data_clean$real_time) ))%>% 
+              mutate(Date = as.character(as.Date(all_data_clean$real_time,  "US/Pacific") ))%>% 
               filter(Date %in% c("2004-05-15"))
+
 one_day_data %>% 
   select(humid_temp, humid_adj, incident_par, reflected_par, voltage, Height) %>%   # do we need voltage
   ggpairs()
@@ -225,70 +226,55 @@ one_day_data %>%
 We also examined that time series plots of variables of interests within a single day. Figure \ref{fig:pairwise_oneday} shows that *need to add more content here*
 
 ```{r timeseries for one day, fig.cap="\\label{fig:ts_oneday} The time series plot of one day's readings", echo = F, cache=T, warning=F, fig.height=6, fig.width=11}
-one_day_data_height <- one_day_data %>% 
-  mutate(`height level` = ifelse(Height > 45, "High", "Medium")) %>% 
-  mutate(`height level` = ifelse(Height < 30, "Low", `height level`)) 
-
-temp_height <- ggplot(one_day_data_height) + 
+temp_height <- ggplot(one_day_data) + 
   geom_line(aes(real_time, humid_temp, col = `height level`)) + labs(y = "Temperature", x = "", color = "Height") +
   theme(text = element_text(size = 8))  +  guides(colour = guide_legend(nrow = 1))
-humid_height <- ggplot(one_day_data_height) + 
+humid_height <- ggplot(one_day_data) + 
   geom_line(aes(real_time, humid_adj, col = `height level`)) + labs(y = "Humidity", x = "") +
     theme(text = element_text(size = 8))  +  guides(colour = guide_legend(nrow = 1))
-inc_height <- ggplot(one_day_data_height) + 
+inc_height <- ggplot(one_day_data) + 
   geom_line(aes(real_time, incident_par, col = `height level`)) + labs(y = "Incident PAR", x = "") +
     theme(text = element_text(size = 8))  +  guides(colour = guide_legend(nrow = 1))
-ref_height <- ggplot(one_day_data_height) + 
+ref_height <- ggplot(one_day_data) + 
   geom_line(aes(real_time, reflected_par, col = `height level`)) + labs(y = "Reflected PAR", x = "") +
     theme(text = element_text(size = 8))  +  guides(colour = guide_legend(nrow = 1))
 
-g_legend<-function(a.gplot){
+g_legend <- function(a.gplot){
   tmp <- ggplot_gtable(ggplot_build(a.gplot))
   leg <- which(sapply(tmp$grobs, function(x) x$name) == "guide-box")
   legend <- tmp$grobs[[leg]]
   return(legend)}
 
-height_legend <-g_legend(temp_height)
+height_legend <- g_legend(temp_height)
 
 grid.arrange(arrangeGrob(temp_height + theme(legend.position="none"),
                          humid_height + theme(legend.position="none"),
                          inc_height + theme(legend.position="none"), 
                          ref_height + theme(legend.position="none"),
-                         nrow = 2),
-             height_legend, nrow = 2, heights = c(10, 1))
+                         nrow = 2), height_legend, nrow = 2, heights = c(10, 1))
 ```
 
-*Do we want to use 3 day? (Plots are ready here)* Figure \{fig:ts_3day}
+*Do we want to use 3 day? (Plots are ready here)* Figure \ref{fig:ts_3day}
 
 ```{r timeseries for 3 days, fig.cap="\\label{fig:ts_3day} The time series plot of three days' readings", echo = F, cache=T, warning=F, fig.height=6, fig.width=11}
 
 three_good_day <- all_data_clean %>%
-              mutate(Date = as.character(as.Date(all_data_clean$real_time) ))%>% 
+              mutate(Date = as.character(as.Date(all_data_clean$real_time, "US/Pacific") ))%>% 
               # filter(Date %in% c("2004-05-14", "2004-05-15", "2004-05-16"))
               filter(Date %in% c("2004-04-30", "2004-05-01", "2004-05-02"))
 
-three_good_day_height <- three_good_day %>% 
-  mutate(`height level` = ifelse(Height > 45, "High", "Medium")) %>% 
-  mutate(`height level` = ifelse(Height < 30, "Low", `height level`)) 
-
-temp_height <- ggplot(three_good_day_height) + 
+temp_height <- ggplot(three_good_day) + 
   geom_line(aes(real_time, humid_temp, col = `height level`)) + labs(y = "Temperature", x = "", color = "Height") +
   theme(text = element_text(size = 8))  +  guides(colour = guide_legend(nrow = 1))
-humid_height <- ggplot(three_good_day_height) + 
+humid_height <- ggplot(three_good_day) + 
   geom_line(aes(real_time, humid_adj, col = `height level`)) + labs(y = "Humidity", x = "") +
     theme(text = element_text(size = 8))  +  guides(colour = guide_legend(nrow = 1))
-inc_height <- ggplot(three_good_day_height) + 
+inc_height <- ggplot(three_good_day) + 
   geom_line(aes(real_time, incident_par, col = `height level`)) + labs(y = "Incident PAR", x = "") +
     theme(text = element_text(size = 8))  +  guides(colour = guide_legend(nrow = 1))
-ref_height <- ggplot(three_good_day_height) + 
+ref_height <- ggplot(three_good_day) + 
   geom_line(aes(real_time, reflected_par, col = `height level`)) + labs(y = "Reflected PAR", x = "") +
     theme(text = element_text(size = 8))  +  guides(colour = guide_legend(nrow = 1))
-
-g_legend<-function(a.gplot){
-  tmp <- ggplot_gtable(ggplot_build(a.gplot))
-  leg <- which(sapply(tmp$grobs, function(x) x$name) == "guide-box")
-  legend <- tmp$grobs[[leg]]
-  return(legend)}
 
 height_legend <-g_legend(temp_height)
 
@@ -301,9 +287,163 @@ grid.arrange(arrangeGrob(temp_height + theme(legend.position="none"),
 ```
 
 
+```{r PCA all, fig.cap="\\label{fig:pca_all} Scree plot and total variation plot suggest that two PCs are sufficient low-dimentional representation to approximate the data with the four key variables of interests", echo = F, cache=T, warning=F, out.width = "50%", message = F}
+PCA_result <- prcomp(all_data_clean[c(8:9, 17:18)],center = TRUE, scale. = TRUE)
+# summary(PCA_result)
+# PCA_result
+
+eigenvalues <- (PCA_result$sdev)^2
+eigs_cum <- cumsum(eigenvalues)/sum(eigenvalues)
+a <- ggplot() + geom_point(aes(x = 1:length(eigenvalues), y=eigenvalues)) +
+  geom_line(aes(x = 1:length(eigenvalues), y=eigenvalues)) +
+  labs(x = "First PCs", y = "Eigenvalues") + theme_bw()
+b <- ggplot() + geom_point(aes(x = 1:length(eigenvalues), y=eigs_cum)) +
+geom_line(aes(x = 1:length(eigenvalues), y=eigs_cum)) + theme_bw() +
+  labs(x = "First PCs", y = "Fraction of total variance explained")
+grid.arrange(a,b, nrow = 1)
+```
 
 
 \section{Findings}
+
+```{r PCA one day, fig.cap="\\label{fig:pca_1day} PCA and clustering of data points on May 15, 2004", echo = F, cache=T, warning=F, fig.height=4, fig.width=11}
+one_day_data_2h <- one_day_data %>% 
+  mutate(date = as.Date(real_time, "US/Pacific"), hour = format((one_day_data$real_time), format = "%H") ) %>% 
+  filter(hour %in% c("00", "12"))
+
+PCA_result_1_day <- prcomp(one_day_data_2h[c(8:9, 17:18)],center = TRUE, scale. = TRUE)
+# summary(PCA_result_1_day)
+# PCA_result_1_day
+
+true_plot <- ggbiplot(pcobj = PCA_result_1_day, choices = c(1,2),
+                  obs.scale = 1, var.scale = 1,  # Scaling of axis
+                 labels.size = 2.5, varname.size = 2.5,
+                  varname.abbrev = TRUE,  # Abbreviate variable names (TRUE)
+                  var.axes = TRUE,      # Remove variable vectors (TRUE)
+                  circle = TRUE,        # Add unit variance circle (TRUE)
+                  ellipse = FALSE, groups = one_day_data_2h$hour)
+
+PCA_result_1_day_dat <- as_tibble(PCA_result_1_day$x[,1:2])
+
+
+cl_km <- kmeans(PCA_result_1_day_dat, 2, nstart = 25)
+z_km <- cl_km$cluster
+kmeans_center <- cl_km$centers
+k_means_plot <- ggplot() + geom_point(aes(PCA_result_1_day$x[, 1], PCA_result_1_day$x[, 2], col=factor(z_km)), size = 0.6) + labs(x = "PC1", y = "PC2", title = "K-means Algorithm", color = "K-mean Cluster")
+
+model_GMM <- Mclust(PCA_result_1_day_dat, G = 2)
+z_GMM = apply(model_GMM$z, 1, which.max)
+GMM_means <- model_GMM$parameters$mean
+EM_plot <- ggplot() + geom_point(aes(PCA_result_1_day$x[, 1], PCA_result_1_day$x[, 2], col=factor(z_GMM)), size = 0.6) + labs(x = "PC1", y = "PC2", title = "GMM Using EM", color = "GMM Cluster")
+
+
+grid.arrange(true_plot, k_means_plot, EM_plot, nrow = 1)
+```
+
+
+
+```{r PCA 2 days, fig.cap="\\label{fig:pca_2day} PCA and clustering of data points on May 1 and May 17", echo = F, cache=T, warning=F, fig.height=4, fig.width=11}
+two_day <- all_data_clean %>%
+          mutate(date = as.character(as.Date(real_time, "US/Pacific")), hour = format((all_data_clean$real_time), format = "%H") ) %>% 
+              filter(date %in% c("2004-05-02", "2004-05-17")) 
+
+
+PCA_result_2_day <- prcomp(two_day[c(8:9, 17:18)],center = TRUE, scale. = TRUE)
+# summary(PCA_result_2_day)
+# PCA_result_2_day
+
+
+true_plot <- ggbiplot(pcobj = PCA_result_2_day, choices = c(1,2),
+                  obs.scale = 1, var.scale = 1,  # Scaling of axis
+                  labels.size = 2.5, varname.size = 2.5,
+                  varname.abbrev = TRUE,  # Abbreviate variable names (TRUE)
+                  var.axes = TRUE,      # Remove variable vectors (TRUE)
+                  circle = TRUE,        # Add unit variance circle (TRUE)
+                  ellipse = FALSE, groups = two_day$date)
+
+PCA_result_2_day_dat <- as_tibble(PCA_result_2_day$x[,1:2])
+
+
+cl_km <- kmeans(PCA_result_2_day_dat, 2, nstart = 25)
+z_km <- cl_km$cluster
+kmeans_center <- cl_km$centers
+k_means_plot <- ggplot() + geom_point(aes(PCA_result_2_day$x[, 1], PCA_result_2_day$x[, 2], col=factor(z_km)), size = 0.6) + labs(x = "PC1", y = "PC2", title = "K-means Algorithm", color = "K-mean Cluster")
+
+model_GMM <- Mclust(PCA_result_2_day_dat, G=2)
+z_GMM = apply(model_GMM$z, 1, which.max)
+GMM_means <- model_GMM$parameters$mean
+EM_plot <- ggplot() + geom_point(aes(PCA_result_2_day$x[, 1], PCA_result_2_day$x[, 2], col=factor(z_GMM)), size = 0.6) + labs(x = "PC1", y = "PC2", title = "GMM Using EM", color = "GMM Cluster")
+
+grid.arrange(true_plot, k_means_plot, EM_plot, nrow = 1)
+```
+
+```{r two day compare, fig.cap="\\label{fig:compare_2_day} The key difference between May 1 and May 17 lies in their temperature and humidity.", echo = F, cache=T, warning=F, out.width="65%"}
+temp_two_day <- ggplot(two_day) + 
+  geom_boxplot(aes(hour, humid_temp, col = date)) + labs(y = "Temperature", x = "", color = "Date") +
+  theme(text = element_text(size = 8))  +  guides(colour = guide_legend(nrow = 1))
+
+humid_two_day <- ggplot(two_day) + 
+  geom_boxplot(aes(hour, humid_adj, col = date)) + labs(y = "Humidity", x = "") +
+    theme(text = element_text(size = 8))  +  guides(colour = guide_legend(nrow = 1))
+
+two_day_legend <- g_legend(temp_two_day)
+
+grid.arrange(arrangeGrob(temp_two_day + theme(legend.position="none"),
+                         humid_two_day + theme(legend.position="none"),
+                         nrow = 1),
+             two_day_legend, nrow = 2, heights = c(10, 1))
+```
+
+
+
+
+```{r PCA 2 nodes, fig.cap="\\label{fig:pca_2nodes} PCA and clustering of data points from node 14 (at 29 feet high) and 42 (at 59 feet high)", echo = F, cache=T, warning=F, fig.height=4, fig.width=11}
+two_node_data <- all_data_clean %>%
+          mutate(date = as.character(as.Date(real_time, "US/Pacific")), hour = format((all_data_clean$real_time), format = "%H") ) %>% 
+              filter(hour %in% c("12")) %>% 
+              filter(nodeid %in% c(14, 42)) 
+
+PCA_two_node <- prcomp(two_node_data[c(8:9, 17:18)],center = TRUE, scale. = TRUE)
+# summary(PCA_two_node)
+# PCA_two_node
+
+true_plot <- ggbiplot(pcobj = PCA_two_node, choices = c(1,2),
+                  obs.scale = 1, var.scale = 1,  # Scaling of axis
+                  labels.size = 4, varname.size = 5,
+                  varname.abbrev = TRUE,  # Abbreviate variable names (TRUE)
+                  var.axes = TRUE,      # Remove variable vectors (TRUE)
+                  circle = TRUE,        # Add unit variance circle (TRUE)
+                  ellipse = FALSE, groups = factor(two_node_data$nodeid))
+
+PCA_two_node_dat <- as_tibble(PCA_two_node$x[,1:2])
+
+cl_km <- kmeans(PCA_two_node_dat, 2, nstart = 25)
+z_km <- cl_km$cluster
+kmeans_center <- cl_km$centers
+k_means_plot <- ggplot() + geom_point(aes(PCA_two_node$x[, 1], PCA_two_node$x[, 2], col=factor(z_km)), size = 0.6) + labs(x = "PC1", y = "PC2", title = "K-means Algorithm", color = "K-mean Cluster")
+
+model_GMM <- Mclust(PCA_two_node_dat, G=2)
+z_GMM = apply(model_GMM$z, 1, which.max)
+GMM_means <- model_GMM$parameters$mean
+EM_plot <- ggplot() + geom_point(aes(PCA_two_node$x[, 1], PCA_two_node$x[, 2], col=factor(z_GMM)), size = 0.6) + labs(x = "PC1", y = "PC2", title = "GMM Using EM", color = "GMM Cluster")
+
+grid.arrange(true_plot, k_means_plot, EM_plot, nrow = 1)
+```
+
+
+\section{Critiques}
+
+
+```{r log of 3a, fig.cap="\\label{fig:hist_log} Histograms for variables of interests with log transformation", echo = F, cache=T, warning=F, out.width = "55%", message = F}
+hist.data.frame(all_data_clean%>%
+                  mutate(log_temp =log(humid_temp), log_humid = log(humid_adj), 
+                         log_incident_par = log(incident_par), log_reflected_par = log(reflected_par)) %>% 
+                    dplyr::select(c(log_temp, log_humid, log_incident_par, log_reflected_par)))
+```
+
+
+
+
 
 
 \section{Reference}
