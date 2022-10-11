@@ -485,6 +485,7 @@ hist.data.frame(all_data_clean%>%
 
 # hist(log(all_data_clean$incident_par))
 ```
+
 ```{r adjust 3c}
 all_data_clean %>% filter(as.Date(real_time, "US/Pacific") == "2004-05-01") %>% 
   group_by(factor(Height)) %>% dplyr::summarize(mean_temp = mean(humid_temp)) %>% 
@@ -534,7 +535,7 @@ left_join(yield_compare, mote_location_data, by = c("nodeid" = "ID")) %>%
   mutate(source = ifelse(result_time == "2004-11-10 14:25:00", "log", "net")) %>% 
   mutate(date = as.Date(real_time, "US/Pacific")) %>% 
   ggplot(aes(as.factor(Height))) + geom_bar()+ facet_wrap(~source) +
-     theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 0.5))  + coord_flip() + 
+     theme(text = element_text(size = 6.4))  + coord_flip() + 
   labs(x = "Height", y = "Data Yield")
 ```
 

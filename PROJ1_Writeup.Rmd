@@ -4,7 +4,7 @@ author: "Yicheng Shen (Student ID: 2806571) & Yunhong Bao (Student ID: 2427527)"
 date: "October 13, 2022"
 header-includes:
     - \setlength{\parskip}{0em}
-    - \usepackage{setspace}\doublespacing
+    - \usepackage{setspace}\onehalfspacing
     - \setlength{\parindent}{2em}
     - \usepackage{indentfirst}
     - \usepackage{float}
@@ -90,7 +90,7 @@ In addition, the location information of each sensor node, or mote, was recorded
 
 The first significant unit conversion is the conversion of voltage. 
 We noticed the units of `voltage` are inconsistent between `sonoma-data-net.csv` and `sonoma-data-log.csv`. 
-After performing a time series plot of voltage, temperature, and humidity, we were able to identity the battery failure time as depicted in the paper. 
+After performing a time series plot of `voltage`, `temperature`, and `humidity`, we were able to identity the battery failure time as depicted in the paper. 
 However, utilizing the voltage unit from `sonoma-data-net.csv`, we see a explosion of observed voltage at failure times instead of a low voltage. 
 Thus, it is determined that the real battery voltage in the unit of volts should be some inverse function of the voltage unit in `sonoma-data-net.csv`. 
 Counting battery reading in both files, we observed a large repetition of voltage value 1023 and 0.580567 volts. 
@@ -109,8 +109,8 @@ Thus, we converted to the unit of PPFD ($\mu \text{mol} \ m^{-2} s^{-1}$) by a c
 \subsection{Time Restoration}
 
 Another crucial element of the data cleaning process is the restoration of time variable. 
-In the file `sonoma-data-log.csv`, the time variable is fixed at 2004-11-10 14:25:00 which is the data extraction time. 
-For data analysis purpose, we want to restore the time variable to actual data collection time. This is accomplished by evaluating the `nodeid` variable and `epoch` variable. 
+In `sonoma-data-log.csv`, the time variable is fixed at 2004-11-10 14:25:00, which is the log data extraction time. 
+For data analysis purpose, we want to restore the time variable to actual collection time. This is accomplished by evaluating the `nodeid` and `epoch` variables. 
 It is observed that `nodeid` represent a specific sensor and `epoch` records the exact number of time it records data. 
 Furthermore, we discovered that `epoch` is synchronized across all sensors.
 In other words, an identical epoch reading indicates two data are collected roughly at the same time. 
@@ -123,11 +123,12 @@ $$
 
 Utilizing this function, the data collection time in file `sonoma-data-log.csv` is restored. Utilizing the time variable in `sonoma-data-net.csv` as a reference, the calculated time matches with the real time data by a minor error.
 
-Furthermore, we noticed that the time variable in `sonoma-data-net.csv` is also suspiciously inaccurate, with higher temperature recorded during the nighttime. 
+Furthermore, we noticed that the time variable in `sonoma-data-net.csv` is also suspiciously inaccurate, with higher `temperature` recorded during nights. 
 We thus crossed-matched the `epoch` and time variable with those provided in @Tolle05amacroscope.
 Based on the match, we adjusted the time variable by approximately seven hours. 
 
 \subsection{Data Merging}
+
 After unit conversion, data in `sonoma-data-net.csv` and `sonoma-data-log.csv` are ready to be merged into a final data file. 
 To perform this task, we first investigated repetitive entries within each data file. An intriguing finding was that there existed data points sharing the same node id and epoch value, ie, certain sensors recorded two readings at a single time. This finding provided guidence to the method we should employ in the data-merging process. To avoid repetitive data, a row bind is performed on the mutated `sonoma-data-net.csv` and `sonoma-data-log.csv` file. Then, we selected distinct elements by the nodeid and epoch column. Through this method, only the first datapoints with repetitive nodeid and epoch values are kept. Repetition is avoided. Then, we performed a left join to combine the location data.
 
@@ -135,7 +136,7 @@ To perform this task, we first investigated repetitive entries within each data 
 
 Upon a close examination of the histograms of variables of interests, we noticed that the PAR measurements for sensor node 40, although having a seemingly normal battery voltage, were unstable and quite abnormal as seen in Figure \ref{fig:node40}. Therefore, we removed the readings recorded by this node. 
 
-```{r show node 40, fig.cap="\\label{fig:node40} The anomaly readings from node 40", echo = F, cache=T, warning=F, out.width = "50%"}
+```{r show node 40, fig.cap="\\label{fig:node40} The anomaly readings recorded by node 40.", echo = F, cache=T, warning=F, out.width = "50%"}
 a <- all_data %>% filter(nodeid == 40) %>% 
   ggplot() + geom_line(aes(real_time, incident_par, color = factor(nodeid))) + theme_bw() + theme(legend.position="none") +
     labs(y = "Incident PAR", x = "")
@@ -190,7 +191,7 @@ grid.arrange(a, d, b, e, c, f, nrow = 3)
 
 After converting units to correct range and removing wrong readings, we present the histograms of the four variables of interests in Figure \ref{fig:hist4}. The final data set after clean-up has 262,675 observations from 62 nodes, whose readings covered a time period from 2004-04-27 17:14:58 EDT to 2004-06-10 13:59:58 EDT. 
 
-```{r show histgrams, fig.cap="\\label{fig:hist4} The histgrams of four variables of interets", echo = F, cache=T, warning=F, out.width = "55%"}
+```{r show histgrams, fig.cap="\\label{fig:hist4} The histgrams of four variables of interets (transformation done in Section 5).", echo = F, cache=T, warning=F, out.width = "55%"}
 hist.data.frame(all_data_clean%>%
                 mutate(Temperature = humid_temp, Humidity = humid_adj, `Incident Par` = incident_par, `Reflected Par` = reflected_par) %>% 
                     dplyr::select(c(Temperature, Humidity, `Incident Par`, `Reflected Par`)))
@@ -203,7 +204,7 @@ It could be worthwhile to examine the fluctuations of readings throughout a sing
 We decided to choose a time when there were few sensor failures and most of the available sensors worked normally. 
 Based on Figure \ref{fig:databydate}, we selected May 15, 2014 because the numbers of readings collected around that day were consistent and stable. 
 
-```{r available data, fig.cap="\\label{fig:databydate} The number of data points collected by each day of the experiment", echo = F, cache=T, warning=F, out.width = "50%"}
+```{r available data, fig.cap="\\label{fig:databydate} The number of data points collected on each day of the experiment.", echo = F, cache=T, warning=F, out.width = "50%"}
 all_data_clean %>% 
   mutate(Date = as.Date(all_data_clean$real_time)) %>% 
   group_by(Date) %>% 
@@ -211,9 +212,9 @@ all_data_clean %>%
   ggplot(aes(Date,`Number of data point`)) + geom_point() + geom_line(size = 1.5)
 ```
 
-From Figure \ref{fig:pairwise_oneday}, we found strong correlations between *need to add more content here*
+From Figure \ref{fig:pairwise_oneday}, we found strong correlations between several variables of interest. First of all, a strong negative linear relation occurs between `humidity` and `temperature.` This is intuitive as higher temperature aids water evaporation from ground surface, leading to a reduced humidity. `Incident PAR` and `Reflected PAR` have a correlation coefficient of 0.5, a reasonable result since stronger sunlight would increase both readings. Furthermore, `temperature` and `Incident PAR` share a correlation coefficient of 0.5, as exposure to intense sunlight increases both `Incident PAR` and `temperature`. Another interesting observation is the strong positive correlation between `voltage` and `temperature`. This can explained as higher temperature intensifies chemical reactions within the battery and lead to a higher voltage.
 
-```{r pairwise for one day, fig.cap="\\label{fig:pairwise_oneday} The pairwise scatterplots of variables of interests", echo = F, cache=T, warning=F, out.width = "60%", message = F}
+```{r pairwise for one day, fig.cap="\\label{fig:pairwise_oneday} The pairwise scatterplots of variables of interests.", echo = F, cache=T, warning=F, out.width = "60%", message = F}
 one_day_data <- all_data_clean %>%
               mutate(Date = as.character(as.Date(all_data_clean$real_time,  "US/Pacific") ))%>% 
               filter(Date %in% c("2004-05-15"))
@@ -223,9 +224,9 @@ one_day_data %>%
   ggpairs()
 ```
 
-We also examined that time series plots of variables of interests within a single day. Figure \ref{fig:pairwise_oneday} shows that *need to add more content here*
+We also examined the time series plots of variables of interests within a single day. Figure \ref{fig:pairwise_oneday} shows how readings alter with time, with color representing the heights of sensor nodes. Clear time dependency is visible in the plot. After noon, `temperature`, `Incident PAR`, and `Reflected PAR` reach a maximum due to sunlight exposure. `Humidity`, as a result, reaches its daily minimum. After sunset, temperature and PAR values gradually decrease and humidity begins to peak. The effect of `Height` is also observable in the plot. While higher nodes tend to have lower `humidity` readings, `Height` is usually positively associated with higher readings of temperature and PAR values. These plots confirm our successful unit conversion. 
 
-```{r timeseries for one day, fig.cap="\\label{fig:ts_oneday} The time series plot of one day's readings", echo = F, cache=T, warning=F, fig.height=5, fig.width=11}
+```{r timeseries for one day, fig.cap="\\label{fig:ts_oneday} The time series plot of readings on May 15.", echo = F, cache=T, warning=F, fig.height=5, fig.width=11}
 temp_height <- ggplot(one_day_data) + 
   geom_line(aes(real_time, humid_temp, col = `height level`), size = 0.6) + labs(y = "Temperature", x = "", color = "Height") +
   theme(text = element_text(size = 8))  +  guides(colour = guide_legend(nrow = 1))
@@ -254,9 +255,9 @@ grid.arrange(arrangeGrob(temp_height + theme(legend.position="none"),
                          nrow = 2), height_legend, nrow = 2, heights = c(10, 1))
 ```
 
-*Do we want to use 3 day? (Plots are ready here)* Figure \ref{fig:ts_3day}
+We further selected three days with abundant and stable readings, where lasted from April 30 to May 2. Figure \ref{fig:ts_3day} show that these three days had a consistent rising of `temperature`, as consequently `humidity` dropped every day. In fact, the highest temperature, 32.58 degrees, during the entire experiment was recorded in the afternoon on May 2. The PAR values were stable across these days since it was likely to be sunny.
 
-```{r timeseries for 3 days, fig.cap="\\label{fig:ts_3day} The time series plot of three days' readings", echo = F, cache=T, warning=F, fig.height=5, fig.width=11}
+```{r timeseries for 3 days, fig.cap="\\label{fig:ts_3day} The time series plot of readings from April 30 to May 2.", echo = F, cache=T, warning=F, fig.height=5, fig.width=11}
 three_good_day <- all_data_clean %>%
               mutate(Date = as.character(as.Date(all_data_clean$real_time, "US/Pacific") ))%>% 
               # filter(Date %in% c("2004-05-14", "2004-05-15", "2004-05-16"))
@@ -285,8 +286,9 @@ grid.arrange(arrangeGrob(temp_height + theme(legend.position="none"),
              height_legend, nrow = 2, heights = c(10, 1))
 ```
 
+A Principal Component Analysis is conducted on the cleaned data set. From the scree plot below, we can see that two dimensions are enough to explain for 84% of variations within the data. Closely evaluating each PC directions, it is observed that the first PC direction is dominated by `humidity` and `temperature` while the second PC direction is dominated by `Incident PAR` and `Reflected PAR`. This PCA result matches the pattern discovered in \ref{fig:pairwise_oneday}. With the high correlation between `humidity` and `temperature` and between both `PAR` values, it is sufficient to reduce the data dimension from 4 to 2.
 
-```{r PCA all, fig.cap="\\label{fig:pca_all} Scree plot and total variation plot suggest that two PCs are sufficient low-dimentional representation to approximate the data with the four key variables of interests", echo = F, cache=T, warning=F, fig.height=2, fig.width=5, message = F}
+```{r PCA all, fig.cap="\\label{fig:pca_all} Scree plot and total variation plot suggest that two PCs are sufficient low-dimentional representation to approximate the data with the four key variables of interests.", echo = F, cache=T, warning=F, fig.height=2, fig.width=5, message = F}
 PCA_result <- prcomp(all_data_clean[c(8:9, 17:18)],center = TRUE, scale. = TRUE)
 # summary(PCA_result)
 # PCA_result
@@ -295,17 +297,23 @@ eigenvalues <- (PCA_result$sdev)^2
 eigs_cum <- cumsum(eigenvalues)/sum(eigenvalues)
 a <- ggplot() + geom_point(aes(x = 1:length(eigenvalues), y=eigenvalues)) +
   geom_line(aes(x = 1:length(eigenvalues), y=eigenvalues)) +
-  labs(x = "First PCs", y = "Eigenvalues") + theme_bw()
+  labs(x = "First PCs", y = "Eigenvalues") + theme_bw() + theme(text = element_text(size = 6.4))
 b <- ggplot() + geom_point(aes(x = 1:length(eigenvalues), y=eigs_cum)) +
 geom_line(aes(x = 1:length(eigenvalues), y=eigs_cum)) + theme_bw() +
-  labs(x = "First PCs", y = "Fraction of total variance explained")
+  labs(x = "First PCs", y = "Fraction of total variance explained") + theme(text = element_text(size = 6.4))       
 grid.arrange(a,b, nrow = 1)
 ```
 
 
 \section{Findings}
 
-```{r PCA one day, fig.cap="\\label{fig:pca_1day} PCA and clustering of data points on May 15, 2004", echo = F, cache=T, warning=F, fig.height=4, fig.width=11}
+Detailed findings from our data exploration process is presented in this section. Specific findings include lower dimension representation of data with PCA, day and night data differentiation with clustering methods, and clustering of data from different date, clustering of data from different height.
+
+\subsection{Finding 1: Day and Night Data Differentiation with Clustering}
+
+With the conclusion of a potential lower dimension data representation from the last section, we formed the hypothesis that data can be clustered with specific clustering algorithms such as EM or K-means. In this part, we try to utilize clustering methods to differentiate data collected from day time and night time. We selected data collected between 0:00 to 1:00 and 12:00 to 13:00 on May 15, 2004, a time range where sensor stability is desirable. The left plot in Figure \ref{fig:pca_1day} displays the original data projected on the two PC directions, with red dots representing night time data and green dots showing data collected during day time. The two plots on the right in Figure \ref{fig:pca_1day} display the application of K-means and GMM algorithm to the data points. Both methods are largely accurate with K-means having a marginally better performance. This is resulted from the difference in underlying mechanisms: K-means minimizes the total within-cluster distance while GMM assumes data are generated from some Gaussian distribution. Since selected data do not perfectly follow a normal distribution, GMM has a worse performance. This abuse of model assumption is further demonstrated in the next subsection. Overall, we demonstrated how clustering method can be utilized to differentiate data collected during day time or night time.
+
+```{r PCA one day, fig.cap="\\label{fig:pca_1day} PCA and clustering of data points on May 15, 2004", echo = F, cache=T, warning=F, fig.height=4.8, fig.width=13}
 one_day_data_2h <- one_day_data %>% 
   mutate(date = as.Date(real_time, "US/Pacific"), hour = format((one_day_data$real_time), format = "%H") ) %>% 
   filter(hour %in% c("00", "12"))
@@ -316,7 +324,7 @@ PCA_result_1_day <- prcomp(one_day_data_2h[c(8:9, 17:18)],center = TRUE, scale. 
 
 true_plot <- ggbiplot(pcobj = PCA_result_1_day, choices = c(1,2),
                   obs.scale = 1, var.scale = 1,  # Scaling of axis
-                 labels.size = 2.5, varname.size = 2.5,
+                 labels.size = 3, varname.size = 3,
                   varname.abbrev = TRUE,  # Abbreviate variable names (TRUE)
                   var.axes = TRUE,      # Remove variable vectors (TRUE)
                   circle = TRUE,        # Add unit variance circle (TRUE)
@@ -339,7 +347,28 @@ EM_plot <- ggplot() + geom_point(aes(PCA_result_1_day$x[, 1], PCA_result_1_day$x
 grid.arrange(true_plot, k_means_plot, EM_plot, nrow = 1)
 ```
 
+\subsection{Finding 2: Differentiation of Data Collection Date}
 
+In this section, we further utilize the two clustering methods to differentiate data collected under different weather conditions (rainy versus sunny). May 2 (sunny) and May 17 (rainy) are selected for analysis. In figure \ref{fig:compare_2_day}, we can observe the clear discrepancy in `temperature` and `humidity` readings between data collected these two days.
+
+```{r two day compare, fig.cap="\\label{fig:compare_2_day} The key difference between May 1 and May 17 lies in their temperature and humidity.", echo = F, cache=T, warning=F, fig.height=2.5, fig.width=5.5}
+temp_two_day <- ggplot(two_day) + 
+  geom_boxplot(aes(hour, humid_temp, col = date)) + labs(y = "Temperature", x = "Hour", color = "Date") +
+  theme(text = element_text(size = 8))  +  guides(colour = guide_legend(nrow = 1))
+
+humid_two_day <- ggplot(two_day) + 
+  geom_boxplot(aes(hour, humid_adj, col = date)) + labs(y = "Humidity", x = "Hour") +
+    theme(text = element_text(size = 8))  +  guides(colour = guide_legend(nrow = 1))
+
+two_day_legend <- g_legend(temp_two_day)
+
+grid.arrange(arrangeGrob(temp_two_day + theme(legend.position="none"),
+                         humid_two_day + theme(legend.position="none"),
+                         nrow = 1),
+             two_day_legend, nrow = 2, heights = c(10, 1))
+```
+
+In Figure \ref{fig:pca_2day}, the projected data is displayed on the left, with May 2rd in red and May 17th in green. A clear clustering pattern can be observed from the PC plot. In the right two plots, K-means and GMM are applied to the data. While K-means generates the correct clustering pattern, GMM model provides a completely wrong result. These two plots demonstrate the consequence of data failing to satisfy Gaussian model assumptions. Taking a closer observation, it can be concluded that the data is generated from a "half Gaussian" mechanism rather than Gaussian. Thus the result of utilizing GMM model is disastrous. K-means, on the other hand, provides a better clustering result. Overall, we demonstrated how K-means can be utilized to differentiate rainy versus sunny days accurately.
 
 ```{r PCA 2 days, fig.cap="\\label{fig:pca_2day} PCA and clustering of data points on May 1 and May 17", echo = F, cache=T, warning=F, fig.height=4, fig.width=11}
 two_day <- all_data_clean %>%
@@ -376,25 +405,10 @@ EM_plot <- ggplot() + geom_point(aes(PCA_result_2_day$x[, 1], PCA_result_2_day$x
 grid.arrange(true_plot, k_means_plot, EM_plot, nrow = 1)
 ```
 
-```{r two day compare, fig.cap="\\label{fig:compare_2_day} The key difference between May 1 and May 17 lies in their temperature and humidity.", echo = F, cache=T, warning=F, fig.height=2.5, fig.width=5.5}
-temp_two_day <- ggplot(two_day) + 
-  geom_boxplot(aes(hour, humid_temp, col = date)) + labs(y = "Temperature", x = "Hour", color = "Date") +
-  theme(text = element_text(size = 8))  +  guides(colour = guide_legend(nrow = 1))
 
-humid_two_day <- ggplot(two_day) + 
-  geom_boxplot(aes(hour, humid_adj, col = date)) + labs(y = "Humidity", x = "Hour") +
-    theme(text = element_text(size = 8))  +  guides(colour = guide_legend(nrow = 1))
+\subsection{Finding 3: Differentiation of Data from Different Heights}
 
-two_day_legend <- g_legend(temp_two_day)
-
-grid.arrange(arrangeGrob(temp_two_day + theme(legend.position="none"),
-                         humid_two_day + theme(legend.position="none"),
-                         nrow = 1),
-             two_day_legend, nrow = 2, heights = c(10, 1))
-```
-
-
-
+In the last two sections we discovered that K-means algorithm outperforms GMM when applied to clustering of data collected under different time and weather condition. In this section, we explore the circumstance where GMM can be utilized to distinguish the height levels of sensor locations. Data collected around noon by node 14 (at 29 feet height) and node 42 (at 59 feet height) is selected. We want to investigate if `Height` has a significant effect on sensor readings. Data is projected onto 2 PC directions in Figure \ref{fig:pca_2nodes}, with red representing node 14 and green displaying node 42. Application of K-means and GMM are displayed in the right two plots. K-means presents a totally wrong clustering pattern while GMM is able to correctly differentiate data, a result of underlying Gaussian data generation mechanism. From the clear two clusters, we can conclude `Height` has a determining effect on environmental data surround the tree, especially on Incident and Reflected PAR. 
 
 ```{r PCA 2 nodes, fig.cap="\\label{fig:pca_2nodes} PCA and clustering of data points from node 14 (at 29 feet high) and 42 (at 59 feet high)", echo = F, cache=T, warning=F, fig.height=4, fig.width=11}
 two_node_data <- all_data_clean %>%
@@ -430,7 +444,11 @@ grid.arrange(true_plot, k_means_plot, EM_plot, nrow = 1)
 ```
 
 
-\section{Critiques}
+\section{Graph Critiques}
+
+Despite the overall sound quality of the original research paper, we found some potential improvements for data visualization. These improvements includes log transformation of data, changing data range, altering data axis, etc. 
+
+The first potential improvements is log transformation of histogram data in Figure 3[a]. Since both incident and reflected PAR has a long tail, full information can not be easily accessed from the original plot. As an improvement, a histogram with log-transformed data is plotted below. It can be observed that the long tail is no longer present and the audiene can have a bettern sense of data distribution.
 
 
 ```{r log of 3a, fig.cap="\\label{fig:hist_log} Histograms for variables of interests with log transformation.", echo = F, cache=T, warning=F, out.width = "50%", message = F}
@@ -440,12 +458,11 @@ hist.data.frame(all_data_clean%>%
                     dplyr::select(c(log_temp, log_humid, log_incident_par, log_reflected_par)))
 ```
 
-
 \newpage
 
 \section{Appendix}
 
-```{r voltage by day,fig.height=3, fig.width=11, fig.cap="\\label{fig:voltage_day} Daily voltage readings on May 15 and May 20.", echo = F, cache=T}
+```{r voltage by day,fig.height=3, fig.width=11, fig.cap="\\label{fig:voltage_day} Voltage raedings behave similarly with temperature.", echo = F, cache=T}
 a <- ggplot(all_data_clean %>%
               mutate(Date = as.character(as.Date(all_data_clean$real_time, "US/Pacific") ))%>% 
               filter(Date %in% c("2004-05-10"))) + geom_line(aes(real_time, voltage, color = factor(nodeid))) + theme(legend.position="none")
