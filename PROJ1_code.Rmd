@@ -507,6 +507,7 @@ all_data_clean %>% filter(as.Date(real_time, "US/Pacific") == "2004-05-01") %>%
 
 ```{r adjust figrue 7}
 yield_compare <- rbind(sonoma_data_log_with_time, sonoma_data_net_real_vol) 
+save(yield_compare, file = "data/yield_compare.RData")
 
 yield_compare %>% 
   mutate(source = ifelse(result_time == "2004-11-10 14:25:00", "log", "net")) %>% 

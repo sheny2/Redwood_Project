@@ -27,12 +27,15 @@ library(kableExtra)
 library(pracma)
 library(Hmisc)
 library(mclust)
+library(stargazer)
 ggplot2::theme_set(ggplot2::theme_bw())
 knitr::opts_chunk$set(fig.align = 'center')
 knitr::opts_chunk$set(fig.pos = "H")
 
 load("data/all_data.RData")
 load("data/all_data_clean.RData")
+load("data/yield_compare.RData")
+mote_location_data <- read.table("data/mote-location-data.txt", header = TRUE)
 ```
 
 \section{Data Collection}
@@ -43,7 +46,7 @@ With the advancement of technologies, humans are better equipped to collect, pro
 In order to fully understand and utilize large, multi-dimensional data, statisticians have developed applicable statistical tools for exploratory data analysis over the years. 
 In this report, we present a detailed data cleaning and exploration process on a real data set — environmental data around a redwood tree collected by a group of biological and computer science researchers from University of California, Berkeley [@Tolle05amacroscope].  
 
-The project led by Gilman Tolle in the early summer of 2004 was a case study of a wireless sensor network that recorded 44 days in the life of a 70-meter tall redwood tree, at a density of every 5 minutes in time and every 2 meters in space.
+The project led by Gilman Tolle in the early summer of 2004 was a case study of a wireless sensor network that recorded 44 days in the life of a 70-meter-tall redwood tree, at a density of every 5 minutes in time and every 2 meters in space.
 The researchers were motivated by local biologists’ interests in studying the ecophysiology of coastal redwood forests with modern technology and analysis techniques. 
 Advised by biologists, the key objective of the project was to understand the microclimate over the volume of an entire redwood tree, including air temperature, relative humidity, and photosynthetically active solar radiation (PAR). 
 In addition, each data point's node ID, time, and the position of sensor were also recorded.  
@@ -51,7 +54,7 @@ In addition, each data point's node ID, time, and the position of sensor were al
 The researchers carefully examined the data through conducting initial multi-dimensional analysis and range analysis, visualizing notable temporal and spatial trends, performing a combined analysis of parameters of interests, and finally removing apparent outliers and calibrating values from sensors. 
 They concluded their work by elaborating their findings and experience. They emphasize the importance of installation and the necessity of a network monitoring component since tiny differences in positioning of nodes could cause large effects on the resulting data.
 Their study also verified the existence of spatial gradients in the microclimate around a redwood tree.
-Furthermore, their data could play a strong role in validating biological theories and building quantitative bilogical models on the sap flow rate. 
+Furthermore, their data could play a strong role in validating biological theories and building quantitative biological models on the sap flow rate. 
 
 Broadly speaking, this project, with the aid of interdisciplinary expertise, provides rich insights into the complex spatial variation and temporal dynamics of the microclimate surrounding a coastal redwood tree. 
 More significantly, it illustrates the potential of wireless sensor networks to obtain large quantities of data and employs a multi-dimensional analysis methodology to reveal the characteristics of the microclimate, offering a valuable example that benefits future studies and usage of similar technologies. 
@@ -73,7 +76,7 @@ With 33 motes deployed into the tree, researchers claimed that the maximum numbe
 Nevertheless, the available data in this report only exists from May 7th, 2004 to June 2nd, 2004.  
 
 The main variables of interest in the collected dataset are temperature, humidity, and light levels, or the photosynthetically active solar radiation (PAR). 
-Temperature is measured in degree celsius ($^{\circ}C$), and humidity is measured in percentage of relative humidity (RH). 
+Temperature is measured in degree Celsius ($^{\circ}C$), and humidity is measured in percentage of relative humidity (RH). 
 The measurement of PAR, which suggests the energy available for photosynthesis, can be further categorized into incident and reflected PAR measurements. 
 While the sensors initially recorded the PAR measurements in Lux, the researchers converted to the unit of PPFD ($\mu \text{mol} \ m^{-2} s^{-1}$) in their reported findings. 
 
@@ -106,7 +109,7 @@ A unit conversion is also performed on variable `hamatop` and `hamabot`.
 After research, we discovered that the PAR measurements are stored in the unit of Lux. 
 Thus, we converted to the unit of PPFD ($\mu \text{mol} \ m^{-2} s^{-1}$) by a conversion factor of 54 — the conversion coefficient of sunlight since its the primary light source.
 
-\subsection{Time Restoration}
+\subsection{Time Restoration and Missing Data Removal}
 
 Another crucial element of the data cleaning process is the restoration of time variable. 
 In `sonoma-data-log.csv`, the time variable is fixed at 2004-11-10 14:25:00, which is the log data extraction time. 
@@ -124,19 +127,21 @@ $$
 Utilizing this function, the data collection time in file `sonoma-data-log.csv` is restored. Utilizing the time variable in `sonoma-data-net.csv` as a reference, the calculated time matches with the real time data by a minor error.
 
 Furthermore, we noticed that the time variable in `sonoma-data-net.csv` is also suspiciously inaccurate, with higher `temperature` recorded during nights. 
-We thus crossed-matched the `epoch` and time variable with those provided in @Tolle05amacroscope.
+We thus matched the `epoch` and time variable with those provided in @Tolle05amacroscope.
 Based on the match, we adjusted the time variable by approximately seven hours. 
+
+After successful restoration of time, we start the process of removing missing data. In `sonoma-data-net.csv`, 4262 data points are missing throughout May 7th to May 29th. In `sonoma-data-log.csv`, 8270 data points are missing throughout the April 30th to May 26th. Data points with missing values are removed.
 
 \subsection{Data Merging}
 
 After unit conversion, data in `sonoma-data-net.csv` and `sonoma-data-log.csv` are ready to be merged into a final data file. 
-To perform this task, we first investigated repetitive entries within each data file. An intriguing finding was that there existed data points sharing the same node id and epoch value, ie, certain sensors recorded two readings at a single time. This finding provided guidence to the method we should employ in the data-merging process. To avoid repetitive data, a row bind is performed on the mutated `sonoma-data-net.csv` and `sonoma-data-log.csv` file. Then, we selected distinct elements by the nodeid and epoch column. Through this method, only the first datapoints with repetitive nodeid and epoch values are kept. Repetition is avoided. Then, we performed a left join to combine the location data.
+To perform this task, we first investigated repetitive entries within each data file. An intriguing finding was that there existed data points sharing the same node id and epoch value, ie, certain sensors recorded two readings at a single time. This finding provided guidance to the method we should employ in the data-merging process. To avoid repetitive data, a row bind is performed on the mutated `sonoma-data-net.csv` and `sonoma-data-log.csv` file. Then, we selected distinct elements by the nodeid and epoch column. Through this method, only the first datapoints with repetitive nodeid and epoch values are kept. Repetition is avoided. Then, we performed a left join to combine the location data.
 
 \subsection{Outlier Rejection}
 
 Upon a close examination of the histograms of variables of interests, we noticed that the PAR measurements for sensor node 40, although having a seemingly normal battery voltage, were unstable and quite abnormal as seen in Figure \ref{fig:node40}. Therefore, we removed the readings recorded by this node. 
 
-```{r show node 40, fig.cap="\\label{fig:node40} The anomaly readings recorded by node 40.", echo = F, cache=T, warning=F, out.width = "50%"}
+```{r show node 40, fig.cap="\\label{fig:node40} The anomaly readings recorded by node 40.", echo = F, cache=T, warning=F, out.width = "48%"}
 a <- all_data %>% filter(nodeid == 40) %>% 
   ggplot() + geom_line(aes(real_time, incident_par, color = factor(nodeid))) + theme_bw() + theme(legend.position="none") +
     labs(y = "Incident PAR", x = "")
@@ -155,7 +160,7 @@ In addition, we also removed the data that reported a `humidity` reading over 10
 Figure \ref{fig:voltage} presents the comparison of before and after removing anomalous sensor readings. 
 
 
-```{r comparing voltage, fig.cap="\\label{fig:voltage} A comparison of removing anomalous sensor readings. Plots (a) (b) and (c) are the readings before removing anomalous data, and plots (d) (e) and (f) are the readings after removing anomalous data.", echo = F, cache=T, warning = F, out.width = "80%"}
+```{r comparing voltage, fig.cap="\\label{fig:voltage} A comparison of removing anomalous sensor readings. Plots (a) (b) and (c) are the readings before removing anomalous data, and plots (d) (e) and (f) are the readings after removing anomalous data.", echo = F, cache=T, warning = F, out.width = "58%"}
 a <- all_data %>%
   ggplot() + geom_line(aes(real_time, humid_temp, color = factor(nodeid))) +
   ylim(0, 100) + labs(y = "Temperature", x = "", caption = "(a)") + 
@@ -189,32 +194,53 @@ f <- all_data_clean %>%
 grid.arrange(a, d, b, e, c, f, nrow = 3)
 ```
 
-After converting units to correct range and removing wrong readings, we present the histograms of the four variables of interests in Figure \ref{fig:hist4}. The final data set after clean-up has 262,675 observations from 62 nodes, whose readings covered a time period from 2004-04-27 17:14:58 EDT to 2004-06-10 13:59:58 EDT. 
+Since abnormal reading is a often result of battery failure, we discovered that filtering out failing voltage also gets rid of outliers in other readings. After converting units to correct range and removing wrong readings, we present the histograms of the four variables of interest in Figure \ref{fig:hist4}. The final data set after clean-up has 262,675 observations from 62 nodes (31 of them recorded in `sonoma_data_net`), whose readings covered a time period from 2004-04-27 17:14:58 to 2004-06-10 13:59:58. No significant outliers exist in the data set, indicating a successful data cleaning process.  
 
-```{r show histgrams, fig.cap="\\label{fig:hist4} The histgrams of four variables of interets (transformation done in Section 5).", echo = F, cache=T, warning=F, out.width = "55%"}
+```{r show histgrams, fig.cap="\\label{fig:hist4} The histograms of four variables of interet (transformation done in Section 5).", echo = F, cache=T, warning=F, out.width = "60%"}
 hist.data.frame(all_data_clean%>%
-                mutate(Temperature = humid_temp, Humidity = humid_adj, `Incident Par` = incident_par, `Reflected Par` = reflected_par) %>% 
+                mutate(Temperature = humid_temp, Humidity = humid_adj, 
+                       `Incident Par` = incident_par, `Reflected Par` = reflected_par) %>% 
                     dplyr::select(c(Temperature, Humidity, `Incident Par`, `Reflected Par`)))
 ```
 
 
+
 \section{Data Exploration}
 
-It could be worthwhile to examine the fluctuations of readings throughout a single day. 
+Based on Figure \ref{fig:databydate}, available readings diminished towards the end as more and more sensor stopped working. 
+It could be worthwhile to examine the fluctuations of readings throughout one or several days. 
 We decided to choose a time when there were few sensor failures and most of the available sensors worked normally. 
-Based on Figure \ref{fig:databydate}, we selected May 15, 2014 because the numbers of readings collected around that day were consistent and stable. 
+We first selected May 15, 2014 because the numbers of readings collected around that day were consistent and stable. 
 
-```{r available data, fig.cap="\\label{fig:databydate} The number of data points collected on each day of the experiment.", echo = F, cache=T, warning=F, out.width = "50%"}
-all_data_clean %>% 
+```{r available data, fig.cap="\\label{fig:databydate} The number of data points collected from each day or each node of the experiment.", echo = F, cache=T, warning=F, fig.height=4, fig.width=11, message=F}
+a <- all_data_clean %>% 
   mutate(Date = as.Date(all_data_clean$real_time)) %>% 
   group_by(Date) %>% 
   dplyr::summarize(`Number of data point` = n()) %>% 
   ggplot(aes(Date,`Number of data point`)) + geom_point() + geom_line(size = 1.5)
+
+b <- all_data_clean %>% 
+  group_by(nodeid, `height level`) %>% 
+  dplyr::summarize(`Number of data point` = n()) %>% 
+  ggplot() + geom_point(aes(nodeid,`Number of data point`, color = `height level`), size = 2) +
+   geom_text(aes(nodeid,`Number of data point`, label=nodeid), size = 3) 
+
+grid.arrange(a, b, nrow = 1)
 ```
 
-From Figure \ref{fig:pairwise_oneday}, we found strong correlations between several variables of interest. First of all, a strong negative linear relation occurs between `humidity` and `temperature.` This is intuitive as higher temperature aids water evaporation from ground surface, leading to a reduced humidity. `Incident PAR` and `Reflected PAR` have a correlation coefficient of 0.5, a reasonable result since stronger sunlight would increase both readings. Furthermore, `temperature` and `Incident PAR` share a correlation coefficient of 0.5, as exposure to intense sunlight increases both `Incident PAR` and `temperature`. Another interesting observation is the strong positive correlation between `voltage` and `temperature`. This can explained as higher temperature intensifies chemical reactions within the battery and lead to a higher voltage.
+Table 1 presents the summary statistics of variables, including their ranges, averages and standard deviations, which are reasonable and coherent with the original paper. 
 
-```{r pairwise for one day, fig.cap="\\label{fig:pairwise_oneday} The pairwise scatterplots of variables of interests.", echo = F, cache=T, warning=F, out.width = "60%", message = F}
+```{r, echo = F, results='asis'}
+numerical_var <- all_data_clean%>%
+                mutate(Temperature = humid_temp, Humidity = humid_adj, 
+                       `Incident Par` = incident_par, `Reflected Par` = reflected_par) %>% 
+                    dplyr::select(c(Temperature, Humidity, `Incident Par`, `Reflected Par`, Height))
+stargazer(numerical_var, type= "latex", title = "Summary Statistics of Numerical Variables", header=FALSE, font.size = "small")
+```
+
+In Figure \ref{fig:pairwise_oneday}, we found strong correlations between several variables of interest. First of all, a strong negative linear relation occurs between `humidity` and `temperature`. This is intuitive as higher temperature aids water evaporation from ground surface, leading to a reduced humidity. `Incident PAR` and `Reflected PAR` have a correlation coefficient of 0.5, a reasonable result since stronger sunlight would increase both readings. Furthermore, `temperature` and `Incident PAR` share a correlation coefficient of 0.5, as exposure to intense sunlight increases both `Incident PAR` and `temperature`. Another interesting observation is the strong positive correlation between `voltage` and `temperature`. This can be explained as higher temperature intensifies chemical reactions within the battery and lead to a higher voltage.
+
+```{r pairwise for one day, fig.cap="\\label{fig:pairwise_oneday} The pairwise scatterplots of variables of interests on May 15.", echo = F, cache=T, warning=F, out.width="60%", message = F}
 one_day_data <- all_data_clean %>%
               mutate(Date = as.character(as.Date(all_data_clean$real_time,  "US/Pacific") ))%>% 
               filter(Date %in% c("2004-05-15"))
@@ -224,7 +250,9 @@ one_day_data %>%
   ggpairs()
 ```
 
-We also examined the time series plots of variables of interests within a single day. Figure \ref{fig:pairwise_oneday} shows how readings alter with time, with color representing the heights of sensor nodes. Clear time dependency is visible in the plot. After noon, `temperature`, `Incident PAR`, and `Reflected PAR` reach a maximum due to sunlight exposure. `Humidity`, as a result, reaches its daily minimum. After sunset, temperature and PAR values gradually decrease and humidity begins to peak. The effect of `Height` is also observable in the plot. While higher nodes tend to have lower `humidity` readings, `Height` is usually positively associated with higher readings of temperature and PAR values. These plots confirm our successful unit conversion. 
+Before examining the temporal trend, we think `Height` variable could be an important factor influencing node readings. Therefore, we created a new categorical variable indicating `height level`, with 0 to 30 feet being low, 30 to 50  feet being medium and 50 feet and above being high. 
+
+We then examine the time series plots of variables of interests within a single day. Figure \ref{fig:pairwise_oneday} shows how readings alter with time, with color representing the heights of sensor nodes. Clear time dependency is visible in the plot. After noon, `temperature`, `Incident PAR`, and `Reflected PAR` reach a maximum due to sunlight exposure. `Humidity`, as a result, reaches its daily minimum. After sunset, temperature and PAR values gradually decrease and humidity begins to peak. The effect of `Height` is also observable in the plot. While higher nodes tend to have lower `humidity` readings, `Height` is usually positively associated with higher readings of temperature and PAR values. These plots confirm our successful unit conversion. 
 
 ```{r timeseries for one day, fig.cap="\\label{fig:ts_oneday} The time series plot of readings on May 15.", echo = F, cache=T, warning=F, fig.height=5, fig.width=11}
 temp_height <- ggplot(one_day_data) + 
@@ -255,7 +283,7 @@ grid.arrange(arrangeGrob(temp_height + theme(legend.position="none"),
                          nrow = 2), height_legend, nrow = 2, heights = c(10, 1))
 ```
 
-We further selected three days with abundant and stable readings, where lasted from April 30 to May 2. Figure \ref{fig:ts_3day} show that these three days had a consistent rising of `temperature`, as consequently `humidity` dropped every day. In fact, the highest temperature, 32.58 degrees, during the entire experiment was recorded in the afternoon on May 2. The PAR values were stable across these days since it was likely to be sunny.
+We further select three days with abundant and stable readings, which lasted from April 30 to May 2. Figure \ref{fig:ts_3day} shows that these three days experienced a consistent rising of `temperature`, as consequently `humidity` dropped every day. In fact, the highest temperature, 32.58 degrees, during the entire experiment was recorded in the afternoon on May 2. The PAR values were stable across these days since it was likely to be sunny.
 
 ```{r timeseries for 3 days, fig.cap="\\label{fig:ts_3day} The time series plot of readings from April 30 to May 2.", echo = F, cache=T, warning=F, fig.height=5, fig.width=11}
 three_good_day <- all_data_clean %>%
@@ -286,7 +314,7 @@ grid.arrange(arrangeGrob(temp_height + theme(legend.position="none"),
              height_legend, nrow = 2, heights = c(10, 1))
 ```
 
-A Principal Component Analysis is conducted on the cleaned data set. From the scree plot below, we can see that two dimensions are enough to explain for 84% of variations within the data. Closely evaluating each PC directions, it is observed that the first PC direction is dominated by `humidity` and `temperature` while the second PC direction is dominated by `Incident PAR` and `Reflected PAR`. This PCA result matches the pattern discovered in \ref{fig:pairwise_oneday}. With the high correlation between `humidity` and `temperature` and between both `PAR` values, it is sufficient to reduce the data dimension from 4 to 2.
+A Principal Component Analysis (PCA) is conducted on the cleaned data set. From the scree plot below, we can see that two dimensions are enough to explain for 84% of variations within the data. Closely evaluating each PC directions, it is observed that the first PC direction is dominated by `humidity` and `temperature` while the second PC direction is dominated by `Incident PAR` and `Reflected PAR`. This PCA result matches the pattern discovered in \ref{fig:pairwise_oneday}. With the high correlation between `humidity` and `temperature` and between both `PAR` values, it is sufficient to reduce the data dimension from four to two.
 
 ```{r PCA all, fig.cap="\\label{fig:pca_all} Scree plot and total variation plot suggest that two PCs are sufficient low-dimentional representation to approximate the data with the four key variables of interests.", echo = F, cache=T, warning=F, fig.height=2, fig.width=5, message = F}
 PCA_result <- prcomp(all_data_clean[c(8:9, 17:18)],center = TRUE, scale. = TRUE)
@@ -446,23 +474,96 @@ grid.arrange(true_plot, k_means_plot, EM_plot, nrow = 1)
 
 \section{Graph Critiques}
 
-Despite the overall sound quality of the original research paper, we found some potential improvements for data visualization. These improvements includes log transformation of data, changing data range, altering data axis, etc. 
+Despite the sound quality of the original paper, we found some potential improvements for data visualization, including log transformation of data, changing data range, altering data axis, etc. 
 
-The first potential improvements is log transformation of histogram data in Figure 3[a]. Since both incident and reflected PAR has a long tail, full information can not be easily accessed from the original plot. As an improvement, a histogram with log-transformed data is plotted below. It can be observed that the long tail is no longer present and the audiene can have a bettern sense of data distribution.
+The first potential improvement is a log transformation of histogram data in Figure 3[a]. Since both incident and reflected PAR has a long tail, data are heavily clustered towards one end. Useful information about data distribution can not be easily accessed from the original histogram. As an alternative, a histogram with log-transformed data is plotted below. It can be observed that the long tail is no longer present and the audience can have a better sense of data distribution.
 
-
-```{r log of 3a, fig.cap="\\label{fig:hist_log} Histograms for variables of interests with log transformation.", echo = F, cache=T, warning=F, out.width = "50%", message = F}
+```{r log of 3a, fig.cap="\\label{fig:hist_log} Histograms for variables of interests with log transformation.", echo = F, cache=T, warning=F, out.width = "55%", message = F}
 hist.data.frame(all_data_clean%>%
                   mutate(log_temp =log(humid_temp), log_humid = log(humid_adj), 
                          log_incident_par = log(incident_par), log_reflected_par = log(reflected_par)) %>% 
                     dplyr::select(c(log_temp, log_humid, log_incident_par, log_reflected_par)))
 ```
 
-\newpage
+Another potential improvement of graphical visualizations are over Figure 3[c] and Figure 3[d], where the author tries to present the distribution of sensor reading at each height. However, since `Height` is an independent variable here, it should be on the horizontal axis instead of the vertical axis. The original plots are misleading as it take height as the dependent variable. We also learned from Figure 4 of the original paper to select just one day's data instead of plotting all days. A better version would be:
 
-\section{Appendix}
+```{r adjust 3c, fig.cap="\\label{fig:3c_adjust} Adjusted visualization between Height and other variables on May 1.", echo = F, cache=T, message = F, warning=F, fig.height=4, fig.width=11}
+May1_data <- all_data_clean %>% filter(as.Date(real_time, "US/Pacific") == "2004-05-01")
 
-```{r voltage by day,fig.height=3, fig.width=11, fig.cap="\\label{fig:voltage_day} Voltage raedings behave similarly with temperature.", echo = F, cache=T}
+a <- May1_data %>% 
+  group_by(factor(Height)) %>% dplyr::summarize(mean_temp = mean(humid_temp)) %>% 
+  ggplot(aes(x = as.numeric(`factor(Height)`), y = mean_temp)) + geom_point(shape = 2) + geom_smooth(se = F) +
+  labs(x = "Height", y = "Average Temperature") 
+  # geom_hline(yintercept = mean(all_data_clean$humid_temp)) 
+b <- May1_data %>% 
+  group_by(factor(Height)) %>% dplyr::summarize(mean_humid = mean(humid_adj)) %>% 
+  ggplot(aes(x = as.numeric(`factor(Height)`), y = mean_humid)) + geom_point(shape = 2) + geom_smooth(se = F) +
+    labs(x = "Height", y = "Average Humidity") 
+
+c <- all_data_clean %>% filter(as.Date(real_time, "US/Pacific") == "2004-05-01") %>% 
+  ggplot(aes(x = real_time, y = incident_par)) + geom_point(alpha = 0.7) + geom_smooth(se = F)
+
+d <- May1_data %>% 
+  group_by(factor(Height)) %>% dplyr::summarize(mean_incident_par = mean(incident_par)) %>% 
+  ggplot(aes(x = as.numeric(`factor(Height)`), y = mean_incident_par)) + geom_point(shape = 2) + 
+  geom_smooth(se = F)  + labs(x = "Height", y = "Average Incident PAR")
+e <- May1_data %>% 
+  group_by(factor(Height)) %>% dplyr::summarize(mean_reflected_par = mean(reflected_par)) %>% 
+  ggplot(aes(x = as.numeric(`factor(Height)`), y = mean_reflected_par)) + geom_point(shape = 2) + 
+  geom_smooth(se = F)  + labs(x = "Height", y = "Average Reflected PAR") 
+
+grid.arrange(a, b, d, e, nrow = 2)
+```
+
+Furthermore, the first two plots of figure 4 can also be enhanced. While the author utilizes different colors to represent readings from different node, these colors are indistinguishable. Readers have no information about which color represent which node or the specific height of data collection. Here coloring becomes merely a visual effect. An improvement could be to compute the average readings at each time point, and turn `Height` into a factor variable as described in Figure \ref{fig:ts_oneday} and use it for coloring instead. Through this transformation, we can add one more dimension to the plot and provide readers with more information.
+
+```{r timeseries for may one, fig.cap="\\label{fig:ts_may1} The time series plot of readings on May 1.", echo = F, cache=T, warning=F, fig.height=3.3, fig.width=11, message = F}
+temp_height <- May1_data %>% group_by(real_time, `height level`) %>% dplyr::summarize(mean_temp = mean(humid_temp)) %>% 
+  ggplot() + 
+  geom_line(aes(real_time, mean_temp, col = `height level`), size = 0.3) + labs(y = "Temperature", x = "", color = "Height Level") +
+  theme(text = element_text(size = 8))  +  guides(colour = guide_legend(nrow = 1))
+
+humid_height <-  May1_data %>% group_by(real_time, `height level`) %>% dplyr::summarize(mean_humid = mean(humid_adj)) %>% 
+  ggplot() + 
+  geom_line(aes(real_time, mean_humid, col = `height level`), size = 0.3) + labs(y = "Humidity", x = "", color = "Height") +
+  theme(text = element_text(size = 8))  +  guides(colour = guide_legend(nrow = 1))
+
+g_legend <- function(a.gplot){
+  tmp <- ggplot_gtable(ggplot_build(a.gplot))
+  leg <- which(sapply(tmp$grobs, function(x) x$name) == "guide-box")
+  legend <- tmp$grobs[[leg]]
+  return(legend)}
+
+height_legend <- g_legend(temp_height)
+
+grid.arrange(arrangeGrob(temp_height + theme(legend.position="none"),
+                         humid_height + theme(legend.position="none"),
+                         nrow = 1), height_legend, nrow = 2, heights = c(10, 1))
+```
+
+Last but not least, modifications can be made to Figure 7 to enhance informativity. Even though the author plotted the percentage yield, no information is provided concerning total yield amount across different heights and dates. Such information is beneficial for readers to understand detailed data collection process. Furthermore, side by side comparison plots can be employed to highlight the difference between net and log data. To improve these two points, we propose using the following plots:
+
+```{r yield data, fig.cap="\\label{fig:data_yield} The amount of data yielded by log and net data.", echo = F, cache=T, message = F, warning=F, fig.height=3, fig.width=11}
+a <- yield_compare %>% 
+  mutate(source = ifelse(result_time == "2004-11-10 14:25:00", "log", "net")) %>% 
+  mutate(date = as.Date(real_time, "US/Pacific"))  %>% 
+  ggplot(aes(date)) + geom_bar()+ facet_wrap(~source)
+
+b <- left_join(yield_compare, mote_location_data, by = c("nodeid" = "ID")) %>% 
+    na.omit() %>% 
+  mutate(source = ifelse(result_time == "2004-11-10 14:25:00", "log", "net")) %>% 
+  mutate(date = as.Date(real_time, "US/Pacific")) %>% 
+  ggplot(aes(as.factor(Height))) + geom_bar()+ facet_wrap(~source) +
+     theme(text = element_text(size = 6.4))  + coord_flip() + 
+  labs(x = "Height", y = "Data Yield")
+
+grid.arrange(a, b, nrow = 1)
+```
+
+
+
+
+```{r voltage by day,fig.height=3, fig.width=11, fig.cap="\\label{fig:voltage_day} Voltage raedings behave similarly with temperature.", echo = F, cache=T, eval = F}
 a <- ggplot(all_data_clean %>%
               mutate(Date = as.character(as.Date(all_data_clean$real_time, "US/Pacific") ))%>% 
               filter(Date %in% c("2004-05-10"))) + geom_line(aes(real_time, voltage, color = factor(nodeid))) + theme(legend.position="none")
@@ -475,7 +576,7 @@ grid.arrange(a,b, nrow = 1)
 ```
 
 
-```{r node data, fig.cap="\\label{fig:data_by_nde} The number of data points collected by each functional node.", message = F, warning= F, echo = F, cache=T, out.width="60%"}
+```{r node data, fig.cap="\\label{fig:data_by_nde} The number of data points collected by each functional node.", message = F, warning= F, echo = F, cache=T, out.width="60%", eval = F}
 all_data_clean %>% 
   group_by(nodeid, `height level`) %>% 
   dplyr::summarize(`Number of data point` = n()) %>% 
