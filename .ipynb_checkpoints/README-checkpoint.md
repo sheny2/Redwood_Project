@@ -6,4 +6,4 @@ In this report, we present a detailed data cleaning and exploration process on a
 
 The formal report writeup is in `PROJ_Writeup` and all coding schemes are in `PROJ1_code`. 
 
-`Data` folder has all the data. 
+`Data` folder has all the data needed. 
