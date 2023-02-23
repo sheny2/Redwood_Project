@@ -7,3 +7,9 @@ In this report, we present a detailed data cleaning and exploration process on a
 The formal report writeup is in `PROJ_Writeup` and all coding schemes are in `PROJ1_code`. 
 
 `Data` folder has all the data needed. 
+
+Some example visualzation: 
+<img width="960" alt="Screenshot 2023-02-23 at 2 01 13 PM" src="https://user-images.githubusercontent.com/67173948/221004762-51dec472-462f-4a2e-9168-ab45a73cfeef.png">
+<img width="939" alt="Screenshot 2023-02-23 at 2 01 27 PM" src="https://user-images.githubusercontent.com/67173948/221004786-3d33e07e-ff50-4951-bfbf-864a877dbbac.png">
+<img width="968" alt="Screenshot 2023-02-23 at 2 02 00 PM" src="https://user-images.githubusercontent.com/67173948/221004914-85104d21-db18-4cba-8c8b-de9814e0d792.png">
+<img width="978" alt="Screenshot 2023-02-23 at 2 02 12 PM" src="https://user-images.githubusercontent.com/67173948/221004950-5f916e31-fe61-4c08-a36a-3d0a59fc3407.png">
